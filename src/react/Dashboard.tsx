@@ -40,37 +40,50 @@ export default function Dashboard() {
         hoy.setHours(0, 0, 0, 0);
 
         // Ventas de hoy
-        const { data: ordenesHoy } = await supabase
+        const { data: ordenesHoy, error: errorVentas } = await supabase
           .from('ordenes_restaurante')
           .select('total')
           .eq('estado', 'paid')
           .gte('created_at', hoy.toISOString());
 
+        if (errorVentas) console.error('Error cargando ventas:', errorVentas);
         const ventasHoy = ordenesHoy?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
 
         // Órdenes pendientes
-        const { count: ordenesPendientes } = await supabase
+        const { count: ordenesPendientes, error: errorPendientes } = await supabase
           .from('ordenes_restaurante')
           .select('*', { count: 'exact', head: true })
           .in('estado', ['pending', 'preparing', 'ready']);
 
+        if (errorPendientes) {
+          console.error('Error cargando órdenes pendientes:', errorPendientes);
+        }
+
         // Mesas ocupadas
-        const { count: mesasOcupadas } = await supabase
+        const { count: mesasOcupadas, error: errorMesas } = await supabase
           .from('mesas')
           .select('*', { count: 'exact', head: true })
           .eq('estado', 'ocupada');
 
+        if (errorMesas) {
+          console.error('Error cargando mesas:', errorMesas);
+        }
+
         // Gastos del mes
         const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        const { data: gastosMes } = await supabase
+        const { data: gastosMes, error: errorGastosMes } = await supabase
           .from('small_expenses')
           .select('monto')
           .gte('fecha', inicioMes.toISOString().split('T')[0]);
 
-        const { data: gastosGenerales } = await supabase
+        if (errorGastosMes) console.error('Error cargando gastos pequeños:', errorGastosMes);
+
+        const { data: gastosGenerales, error: errorGastosGen } = await supabase
           .from('general_expenses')
           .select('monto')
           .gte('fecha', inicioMes.toISOString().split('T')[0]);
+
+        if (errorGastosGen) console.error('Error cargando gastos generales:', errorGastosGen);
 
         const totalGastos = 
           (gastosMes?.reduce((sum, g) => sum + (g.monto || 0), 0) || 0) +

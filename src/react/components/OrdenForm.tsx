@@ -214,6 +214,12 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
   }
 
   async function updateEstado(nuevoEstado: string) {
+    // Validar que la orden tenga items antes de cambiar el estado
+    if (items.length === 0) {
+      alert('No se puede cambiar el estado de una orden vacía. Agrega items a la orden primero.');
+      return;
+    }
+
     try {
       setSaving(true);
       const { error } = await supabase
@@ -231,6 +237,12 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
   }
 
   async function pagarOrden() {
+    // Validar que la orden tenga items antes de pagar
+    if (items.length === 0) {
+      alert('No se puede pagar una orden vacía. Agrega items a la orden primero.');
+      return;
+    }
+
     try {
       setSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -265,6 +277,37 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       setShowBoleta(true);
     } catch (error: any) {
       alert('Error pagando orden: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function cancelarOrden() {
+    if (!confirm('¿Estás seguro de cancelar esta orden? Esto liberará la mesa.')) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('ordenes_restaurante')
+        .update({ estado: 'cancelled' })
+        .eq('id', ordenId);
+
+      if (error) throw error;
+
+      // Liberar mesa
+      if (orden?.mesa_id) {
+        await supabase
+          .from('mesas')
+          .update({ estado: 'libre' })
+          .eq('id', orden.mesa_id);
+      }
+
+      // Redirigir a mesas
+      window.location.href = '/admin/mesas';
+    } catch (error: any) {
+      alert('Error cancelando orden: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -325,15 +368,17 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 setShowComanda(true);
               }
             }}
-            disabled={orden.estado !== 'pending' || saving}
+            disabled={orden.estado !== 'pending' || saving || items.length === 0}
             className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+            title={items.length === 0 ? 'Agrega items a la orden primero' : ''}
           >
             En Preparación
           </button>
           <button
             onClick={() => updateEstado('ready')}
-            disabled={orden.estado !== 'preparing' || saving}
+            disabled={orden.estado !== 'preparing' || saving || items.length === 0}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            title={items.length === 0 ? 'Agrega items a la orden primero' : ''}
           >
             Lista
           </button>
@@ -341,6 +386,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
             onClick={() => setShowComanda(true)}
             disabled={items.length === 0}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            title={items.length === 0 ? 'Agrega items a la orden primero' : ''}
           >
             🖨️ Comanda Cocina
           </button>
@@ -348,16 +394,28 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
             onClick={() => setShowBoleta(true)}
             disabled={items.length === 0}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            title={items.length === 0 ? 'Agrega items a la orden primero' : ''}
           >
             🧾 Boleta Cliente
           </button>
           <button
             onClick={pagarOrden}
-            disabled={orden.estado === 'paid' || saving}
+            disabled={orden.estado === 'paid' || saving || items.length === 0}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            title={items.length === 0 ? 'Agrega items a la orden primero' : ''}
           >
             Pagar
           </button>
+          {(items.length === 0 && orden.estado === 'pending') && (
+            <button
+              onClick={cancelarOrden}
+              disabled={saving}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              title="Cancelar orden vacía y liberar mesa"
+            >
+              Cancelar Orden
+            </button>
+          )}
         </div>
       </div>
 
