@@ -89,60 +89,56 @@ export default function ComprasView() {
           onClick={() => setShowForm(true)}
           className="w-full sm:w-auto px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm sm:text-base"
         >
-          ➕ Nueva Compra
+          + Nueva Compra
         </button>
       </div>
 
-      {/* Tabla responsive - oculta en móvil, muestra cards */}
       <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-100">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Proveedor</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Factura</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Total</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Estado</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {compras.map((compra) => (
-              <tr key={compra.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-sm">
-                  {new Date(compra.fecha).toLocaleDateString('es-CL')}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {compra.suppliers?.name || '-'}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {compra.numero_factura || '-'}
-                </td>
-                <td className="px-4 py-3 text-sm font-semibold">
-                  {formatCLP(compra.total)}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
-                      compra.estado
-                    )}`}
-                  >
-                    {compra.estado}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => setSelectedCompra(compra)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Ver Detalles
-                  </button>
-                </td>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Proveedor</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Factura</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Total</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Estado</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {compras.map((compra) => (
+                <tr key={compra.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-sm">
+                    {new Date(compra.fecha).toLocaleDateString('es-CL')}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {compra.suppliers?.name || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {compra.numero_factura || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm font-semibold">
+                    {formatCLP(compra.total)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={'px-2 py-1 rounded text-xs font-medium ' + getEstadoColor(compra.estado)}>
+                      {compra.estado}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setSelectedCompra(compra)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      Ver Detalles
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showForm && (
@@ -356,7 +352,7 @@ function CompraDetalleModal({
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm sm:text-base">{item.ingredientes?.nombre}</div>
                 <div className="text-xs sm:text-sm text-slate-600">
-                  {item.cantidad} {item.ingredientes?.unidad_medida} × {formatCLP(item.precio_unitario)}
+                  {item.cantidad} {item.ingredientes?.unidad_medida} x {formatCLP(item.precio_unitario)}
                 </div>
               </div>
               <div className="font-semibold text-sm sm:text-base flex-shrink-0">{formatCLP(item.subtotal)}</div>
@@ -376,5 +372,4 @@ function CompraDetalleModal({
     </div>
   );
 }
-
 
