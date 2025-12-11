@@ -131,3 +131,4 @@ CREATE POLICY "suppliers_delete_admin"
     OR NOT EXISTS (SELECT 1 FROM users LIMIT 1)
   );
 
+

@@ -82,22 +82,24 @@ export default function ComprasView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Compras</h1>
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Compras</h1>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          className="w-full sm:w-auto px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm sm:text-base"
         >
           ➕ Nueva Compra
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
+      {/* Tabla responsive - oculta en móvil, muestra cards */}
+      <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Proveedor</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Factura</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Total</th>
@@ -219,25 +221,25 @@ function CompraFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4">Nueva Compra</h2>
-        <div className="space-y-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Nueva Compra</h2>
+        <div className="space-y-3 sm:space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Fecha *</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Fecha *</label>
             <input
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Proveedor</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Proveedor</label>
             <select
               value={proveedorId}
               onChange={(e) => setProveedorId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="">Sin proveedor</option>
               {suppliers.map((sup) => (
@@ -248,20 +250,20 @@ function CompraFormModal({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Número de Factura</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Número de Factura</label>
             <input
               type="text"
               value={numeroFactura}
               onChange={(e) => setNumeroFactura(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Método de Pago</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Método de Pago</label>
             <select
               value={metodoPago}
               onChange={(e) => setMetodoPago(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="">Sin especificar</option>
               <option value="EFECTIVO">EFECTIVO</option>
@@ -271,26 +273,26 @@ function CompraFormModal({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Notas</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Notas</label>
             <textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
               rows={3}
             />
           </div>
         </div>
-        <div className="flex gap-3 mt-6">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 text-sm sm:text-base"
           >
             {loading ? 'Creando...' : 'Crear Compra'}
           </button>
@@ -333,10 +335,10 @@ function CompraDetalleModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Detalle de Compra</h2>
-        <div className="mb-4 space-y-2">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Detalle de Compra</h2>
+        <div className="mb-3 sm:mb-4 space-y-1.5 sm:space-y-2 text-sm sm:text-base">
           <p><strong>Fecha:</strong> {new Date(compra.fecha).toLocaleDateString('es-CL')}</p>
           <p><strong>Proveedor:</strong> {compra.suppliers?.name || '-'}</p>
           <p><strong>Factura:</strong> {compra.numero_factura || '-'}</p>
@@ -344,28 +346,28 @@ function CompraDetalleModal({
           <p><strong>Total:</strong> {formatCLP(compra.total)}</p>
         </div>
 
-        <h3 className="font-semibold mb-3">Items:</h3>
+        <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Items:</h3>
         <div className="space-y-2">
           {items.map((item) => (
             <div
               key={item.id}
-              className="flex justify-between items-center p-3 border border-slate-200 rounded-lg"
+              className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-2 sm:p-3 border border-slate-200 rounded-lg"
             >
-              <div>
-                <div className="font-medium">{item.ingredientes?.nombre}</div>
-                <div className="text-sm text-slate-600">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm sm:text-base">{item.ingredientes?.nombre}</div>
+                <div className="text-xs sm:text-sm text-slate-600">
                   {item.cantidad} {item.ingredientes?.unidad_medida} × {formatCLP(item.precio_unitario)}
                 </div>
               </div>
-              <div className="font-semibold">{formatCLP(item.subtotal)}</div>
+              <div className="font-semibold text-sm sm:text-base flex-shrink-0">{formatCLP(item.subtotal)}</div>
             </div>
           ))}
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
           >
             Cerrar
           </button>
@@ -374,4 +376,5 @@ function CompraDetalleModal({
     </div>
   );
 }
+
 

@@ -1,5 +1,6 @@
 ---
 import Sidebar from '../react/components/Sidebar';
+import AdminLayoutWrapper from '../react/components/AdminLayoutWrapper';
 
 interface Props {
   title: string;
@@ -22,12 +23,9 @@ const currentPath = Astro.url.pathname;
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-slate-50 min-h-screen">
-    <div class="flex">
-      <Sidebar client:load currentPath={currentPath} />
-      <main class="flex-1">
-        <slot />
-      </main>
-    </div>
+    <AdminLayoutWrapper client:only="react" currentPath={currentPath}>
+      <slot />
+    </AdminLayoutWrapper>
   </body>
 </html>
 

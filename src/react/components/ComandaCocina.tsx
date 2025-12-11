@@ -136,6 +136,7 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           @page {
             size: 80mm auto;
             margin: 0;
+            padding: 0;
           }
 
           * {
@@ -144,109 +145,120 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
             color-adjust: exact !important;
           }
 
+          /* Ocultar TODO excepto la comanda */
+          html, body {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          body > *:not(.comanda-cocina):not(script):not(style) {
+            display: none !important;
+          }
+
           .no-print {
             display: none !important;
           }
 
-          body {
-            margin: 0;
-            padding: 0;
-            background: white !important;
-          }
-
           .comanda-cocina {
-            width: 80mm;
-            max-width: 80mm;
-            padding: 8mm 5mm;
-            font-family: 'Courier New', monospace;
-            font-size: 11pt;
-            line-height: 1.3;
-            background: white;
-            color: black;
+            display: block !important;
+            visibility: visible !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 10pt !important;
+            line-height: 1.3 !important;
+            background: white !important;
+            color: black !important;
+            position: relative !important;
+            page-break-inside: avoid !important;
           }
 
           .comanda-header {
-            text-align: center;
-            margin-bottom: 8px;
+            text-align: center !important;
+            margin-bottom: 8px !important;
           }
 
           .comanda-title {
-            font-size: 16pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            border-bottom: 2px solid black;
-            padding-bottom: 4px;
+            font-size: 14pt !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+            margin-bottom: 6px !important;
+            border-bottom: 2px solid black !important;
+            padding-bottom: 4px !important;
           }
 
           .comanda-info {
-            font-size: 10pt;
-            line-height: 1.5;
+            font-size: 9pt !important;
+            line-height: 1.5 !important;
           }
 
           .comanda-info div {
-            margin: 2px 0;
+            margin: 2px 0 !important;
           }
 
           .comanda-separator {
-            border-top: 1px dashed #333;
-            margin: 8px 0;
+            border-top: 1px dashed #333 !important;
+            margin: 6px 0 !important;
           }
 
           .comanda-section {
-            margin: 10px 0;
+            margin: 8px 0 !important;
           }
 
           .comanda-item {
-            margin: 6px 0;
-            padding: 4px 0;
+            margin: 4px 0 !important;
+            padding: 3px 0 !important;
           }
 
           .comanda-item-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: bold;
-            font-size: 12pt;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            font-weight: bold !important;
+            font-size: 11pt !important;
           }
 
           .comanda-item-cantidad {
-            font-size: 14pt;
-            min-width: 20px;
+            font-size: 12pt !important;
+            min-width: 18px !important;
           }
 
           .comanda-item-nombre {
-            flex: 1;
-            text-transform: uppercase;
+            flex: 1 !important;
+            text-transform: uppercase !important;
           }
 
           .comanda-item-notas {
-            margin-left: 28px;
-            font-size: 9pt;
-            font-style: italic;
-            color: #555;
-            margin-top: 2px;
+            margin-left: 24px !important;
+            font-size: 8pt !important;
+            font-style: italic !important;
+            color: #555 !important;
+            margin-top: 2px !important;
           }
 
           .comanda-nota {
-            font-size: 10pt;
-            padding: 6px;
-            background: #f0f0f0;
-            border-left: 3px solid black;
-            margin: 8px 0;
+            font-size: 9pt !important;
+            padding: 4px !important;
+            background: #f0f0f0 !important;
+            border-left: 2px solid black !important;
+            margin: 6px 0 !important;
           }
 
           .comanda-footer {
-            text-align: center;
-            font-size: 9pt;
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 1px solid #333;
+            text-align: center !important;
+            font-size: 8pt !important;
+            margin-top: 10px !important;
+            padding-top: 6px !important;
+            border-top: 1px solid #333 !important;
           }
 
           .comanda-timestamp {
-            margin-top: 4px;
-            color: #666;
+            margin-top: 3px !important;
+            color: #666 !important;
           }
         }
 
@@ -354,4 +366,5 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
     </>
   );
 }
+
 

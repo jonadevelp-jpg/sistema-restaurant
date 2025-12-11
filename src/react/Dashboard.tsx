@@ -106,26 +106,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-bold text-slate-900">Panel Administrativo</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-600">{user?.name || user?.email}</span>
-              <button
-                onClick={handleLogout}
-                className="text-sm text-slate-600 hover:text-slate-900"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="w-full">
+      <main className="w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
           <KpiCard
             title="Ventas de Hoy"
             value={formatCLP(kpis.ventasHoy)}
@@ -148,52 +131,52 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold mb-4">Accesos Rápidos</h2>
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Accesos Rápidos</h2>
+            <div className="space-y-2 sm:space-y-3">
               <a
                 href="/admin/mesas"
-                className="block p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🪑</span>
-                  <div>
-                    <div className="font-semibold">Mesas (POS)</div>
-                    <div className="text-sm text-slate-600">Gestionar mesas y crear órdenes</div>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl">🪑</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm sm:text-base">Mesas (POS)</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Gestionar mesas y crear órdenes</div>
                   </div>
                 </div>
               </a>
               <a
                 href="/admin/stock"
-                className="block p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">📦</span>
-                  <div>
-                    <div className="font-semibold">Gestión de Stock</div>
-                    <div className="text-sm text-slate-600">Ver y ajustar inventario</div>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl">📦</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm sm:text-base">Gestión de Stock</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Ver y ajustar inventario</div>
                   </div>
                 </div>
               </a>
               <a
                 href="/admin/ingredientes"
-                className="block p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🥕</span>
-                  <div>
-                    <div className="font-semibold">Ingredientes</div>
-                    <div className="text-sm text-slate-600">Administrar ingredientes</div>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl">🥕</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm sm:text-base">Ingredientes</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Administrar ingredientes</div>
                   </div>
                 </div>
               </a>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold mb-4">Órdenes Recientes</h2>
-            <div className="text-sm text-slate-600">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Órdenes Recientes</h2>
+            <div className="text-xs sm:text-sm text-slate-600">
               Las órdenes recientes aparecerán aquí
             </div>
           </div>

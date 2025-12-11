@@ -153,3 +153,4 @@ export default function MenuSection({ category: categoryProp }: MenuSectionProps
   );
 }
 
+

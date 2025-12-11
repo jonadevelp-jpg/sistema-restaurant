@@ -168,6 +168,7 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           @page {
             size: 80mm auto;
             margin: 0;
+            padding: 0;
           }
 
           * {
@@ -176,148 +177,162 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             color-adjust: exact !important;
           }
 
+          /* Ocultar TODO excepto la boleta */
+          html, body {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+
+          body > *:not(.boleta-cliente):not(script):not(style) {
+            display: none !important;
+          }
+
           .no-print {
             display: none !important;
           }
 
-          body {
-            margin: 0;
-            padding: 0;
-            background: white !important;
-          }
-
           .boleta-cliente {
-            width: 80mm;
-            max-width: 80mm;
-            padding: 8mm 5mm;
-            font-family: 'Courier New', monospace;
-            font-size: 10pt;
-            line-height: 1.4;
-            background: white;
-            color: black;
+            display: block !important;
+            visibility: visible !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 9pt !important;
+            line-height: 1.4 !important;
+            background: white !important;
+            color: black !important;
+            position: relative !important;
+            page-break-inside: avoid !important;
           }
 
           .boleta-header {
-            text-align: center;
-            margin-bottom: 8px;
+            text-align: center !important;
+            margin-bottom: 6px !important;
           }
 
           .boleta-logo {
-            font-size: 14pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 4px;
+            font-size: 12pt !important;
+            font-weight: bold !important;
+            text-transform: uppercase !important;
+            margin-bottom: 3px !important;
           }
 
           .boleta-subtitle {
-            font-size: 9pt;
-            color: #555;
-            margin-bottom: 6px;
+            font-size: 8pt !important;
+            color: #555 !important;
+            margin-bottom: 4px !important;
           }
 
           .boleta-separator-small {
-            border-top: 1px solid #333;
-            margin: 6px 0;
+            border-top: 1px solid #333 !important;
+            margin: 4px 0 !important;
           }
 
           .boleta-info {
-            font-size: 9pt;
-            line-height: 1.5;
-            text-align: left;
-            margin-top: 6px;
+            font-size: 8pt !important;
+            line-height: 1.4 !important;
+            text-align: left !important;
+            margin-top: 4px !important;
           }
 
           .boleta-info div {
-            margin: 2px 0;
+            margin: 1px 0 !important;
           }
 
           .boleta-separator {
-            border-top: 1px dashed #333;
-            margin: 8px 0;
+            border-top: 1px dashed #333 !important;
+            margin: 6px 0 !important;
           }
 
           .boleta-items {
-            margin: 8px 0;
+            margin: 6px 0 !important;
           }
 
           .boleta-items-header {
-            display: grid;
-            grid-template-columns: 30px 1fr 70px;
-            gap: 4px;
-            font-weight: bold;
-            font-size: 9pt;
-            padding-bottom: 4px;
-            border-bottom: 1px solid #333;
-            margin-bottom: 6px;
+            display: grid !important;
+            grid-template-columns: 25px 1fr 60px !important;
+            gap: 3px !important;
+            font-weight: bold !important;
+            font-size: 8pt !important;
+            padding-bottom: 3px !important;
+            border-bottom: 1px solid #333 !important;
+            margin-bottom: 4px !important;
           }
 
           .boleta-item {
-            display: grid;
-            grid-template-columns: 30px 1fr 70px;
-            gap: 4px;
-            font-size: 9pt;
-            margin: 4px 0;
-            padding: 2px 0;
+            display: grid !important;
+            grid-template-columns: 25px 1fr 60px !important;
+            gap: 3px !important;
+            font-size: 8pt !important;
+            margin: 2px 0 !important;
+            padding: 1px 0 !important;
           }
 
           .boleta-item-cantidad {
-            text-align: center;
-            font-weight: bold;
+            text-align: center !important;
+            font-weight: bold !important;
           }
 
           .boleta-item-descripcion {
-            word-break: break-word;
+            word-break: break-word !important;
+            font-size: 8pt !important;
           }
 
           .boleta-item-total {
-            text-align: right;
-            font-weight: bold;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 8pt !important;
           }
 
           .boleta-totales {
-            margin: 10px 0;
-            font-size: 10pt;
+            margin: 8px 0 !important;
+            font-size: 9pt !important;
           }
 
           .boleta-total-line {
-            display: flex;
-            justify-content: space-between;
-            margin: 4px 0;
+            display: flex !important;
+            justify-content: space-between !important;
+            margin: 3px 0 !important;
+            font-size: 9pt !important;
           }
 
           .boleta-total-final {
-            font-size: 12pt;
-            font-weight: bold;
-            border-top: 2px solid black;
-            padding-top: 6px;
-            margin-top: 8px;
+            font-size: 11pt !important;
+            font-weight: bold !important;
+            border-top: 2px solid black !important;
+            padding-top: 4px !important;
+            margin-top: 6px !important;
           }
 
           .boleta-pago {
-            font-size: 9pt;
-            text-align: center;
-            padding: 6px;
-            background: #f0f0f0;
-            border: 1px solid #333;
-            margin: 8px 0;
+            font-size: 8pt !important;
+            text-align: center !important;
+            padding: 4px !important;
+            background: #f0f0f0 !important;
+            border: 1px solid #333 !important;
+            margin: 6px 0 !important;
           }
 
           .boleta-pago div {
-            margin: 3px 0;
+            margin: 2px 0 !important;
           }
 
           .boleta-footer {
-            text-align: center;
-            font-size: 9pt;
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 1px solid #333;
+            text-align: center !important;
+            font-size: 8pt !important;
+            margin-top: 10px !important;
+            padding-top: 6px !important;
+            border-top: 1px solid #333 !important;
           }
 
           .boleta-footer-small {
-            font-size: 8pt;
-            color: #666;
-            margin-top: 4px;
+            font-size: 7pt !important;
+            color: #666 !important;
+            margin-top: 3px !important;
           }
         }
 

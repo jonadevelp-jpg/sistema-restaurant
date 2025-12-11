@@ -249,20 +249,20 @@ export default function MenuItemManager() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl font-cinzel text-gold-400">Items del Menú</h2>
-          <p className="text-gold-300/70 text-sm mt-1">
+          <h2 className="text-lg sm:text-xl font-cinzel text-gold-400">Items del Menú</h2>
+          <p className="text-gold-300/70 text-xs sm:text-sm mt-1">
             {items.length} items en total
           </p>
         </div>
         <button
           onClick={openNewForm}
-          className="bg-gold-600 hover:bg-gold-500 text-black px-4 py-2 rounded-lg transition flex items-center gap-2"
+          className="w-full sm:w-auto bg-gold-600 hover:bg-gold-500 text-black px-3 sm:px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 text-sm sm:text-base"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Nuevo Item
@@ -270,20 +270,20 @@ export default function MenuItemManager() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="flex-1">
           <input
             type="text"
             placeholder="🔍 Buscar por nombre o descripción..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-black/50 border border-gold-600 rounded-lg px-4 py-2 text-gold-100 focus:outline-none focus:border-gold-400"
+            className="w-full bg-black/50 border border-gold-600 rounded-lg px-3 sm:px-4 py-2 text-gold-100 focus:outline-none focus:border-gold-400 text-sm sm:text-base"
           />
         </div>
         <select
           value={filterCategory === 'all' ? 'all' : filterCategory}
           onChange={(e) => setFilterCategory(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-          className="bg-black/50 border border-gold-600 rounded-lg px-4 py-2 text-gold-100 focus:outline-none focus:border-gold-400"
+          className="w-full sm:w-auto bg-black/50 border border-gold-600 rounded-lg px-3 sm:px-4 py-2 text-gold-100 focus:outline-none focus:border-gold-400 text-sm sm:text-base"
         >
           <option value="all">Todas las categorías</option>
           {categories.map(cat => (
@@ -293,23 +293,23 @@ export default function MenuItemManager() {
       </div>
 
       {/* Lista de items */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {filteredItems.map((item) => (
           <div
             key={item.id}
             className={`
-              bg-black/30 border rounded-lg p-4 transition
+              bg-black/30 border rounded-lg p-3 sm:p-4 transition
               ${item.is_available ? 'border-gold-600' : 'border-gray-600 opacity-60'}
             `}
           >
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               {/* Imagen */}
               {item.image_url ? (
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 self-center sm:self-start">
                   <img
                     src={item.image_url}
                     alt={item.name}
-                    className="w-20 h-20 object-cover rounded-lg border border-gold-600"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gold-600"
                     loading="lazy"
                     onError={(e) => {
                       console.error('Error cargando imagen:', item.image_url);
@@ -318,7 +318,7 @@ export default function MenuItemManager() {
                   />
                 </div>
               ) : (
-                <div className="flex-shrink-0 w-20 h-20 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
+                <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center self-center sm:self-start">
                   <span className="text-gray-500 text-xs">Sin imagen</span>
                 </div>
               )}
@@ -326,27 +326,27 @@ export default function MenuItemManager() {
               {/* Contenido */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h3 className="text-gold-400 font-bold text-lg">{item.name}</h3>
+                  <h3 className="text-gold-400 font-bold text-base sm:text-lg">{item.name}</h3>
                   {!item.is_available && (
-                    <span className="bg-red-600/30 text-red-400 px-2 py-0.5 rounded text-xs">
+                    <span className="bg-red-600/30 text-red-400 px-1.5 sm:px-2 py-0.5 rounded text-xs">
                       No disponible
                     </span>
                   )}
                   {item.is_featured && (
-                    <span className="bg-gold-600/30 text-gold-400 px-2 py-0.5 rounded text-xs">
+                    <span className="bg-gold-600/30 text-gold-400 px-1.5 sm:px-2 py-0.5 rounded text-xs">
                       ⭐ Destacado
                     </span>
                   )}
                 </div>
                 
                 {item.description && (
-                  <p className="text-gold-300/70 text-sm mb-2 line-clamp-2">{item.description}</p>
+                  <p className="text-gold-300/70 text-xs sm:text-sm mb-2 line-clamp-2">{item.description}</p>
                 )}
                 
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  <span className="text-gold-300 font-bold text-lg">{formatPrice(item.price)}</span>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                  <span className="text-gold-300 font-bold text-base sm:text-lg">{formatPrice(item.price)}</span>
                   {item.category && (
-                    <span className="text-gold-400/60 bg-gold-600/10 px-2 py-0.5 rounded">
+                    <span className="text-gold-400/60 bg-gold-600/10 px-1.5 sm:px-2 py-0.5 rounded text-xs">
                       {item.category.name}
                     </span>
                   )}
@@ -355,11 +355,11 @@ export default function MenuItemManager() {
               </div>
 
               {/* Acciones */}
-              <div className="flex flex-wrap lg:flex-col gap-2 lg:ml-4">
+              <div className="flex flex-wrap sm:flex-col gap-2 sm:ml-4">
                 <button
                   onClick={() => handleToggleAvailable(item)}
                   className={`
-                    px-3 py-1.5 rounded-lg text-sm transition
+                    flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition
                     ${item.is_available 
                       ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30' 
                       : 'bg-gray-600/20 text-gray-400 hover:bg-gray-600/30'
@@ -367,32 +367,32 @@ export default function MenuItemManager() {
                   `}
                   title={item.is_available ? 'Marcar como no disponible' : 'Marcar como disponible'}
                 >
-                  {item.is_available ? '✅ Disponible' : '❌ No disp.'}
+                  {item.is_available ? '✅ Disp.' : '❌ No disp.'}
                 </button>
 
                 <button
                   onClick={() => handleToggleFeatured(item)}
                   className={`
-                    px-3 py-1.5 rounded-lg text-sm transition
+                    flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition
                     ${item.is_featured 
                       ? 'bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30' 
                       : 'bg-gray-600/20 text-gray-400 hover:bg-gray-600/30'
                     }
                   `}
                 >
-                  {item.is_featured ? '⭐ Destacado' : '☆ Destacar'}
+                  {item.is_featured ? '⭐ Dest.' : '☆ Destacar'}
                 </button>
 
                 <button
                   onClick={() => openEditForm(item)}
-                  className="bg-gold-600/20 text-gold-400 px-3 py-1.5 rounded-lg text-sm hover:bg-gold-600/30 transition"
+                  className="flex-1 sm:flex-none bg-gold-600/20 text-gold-400 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-gold-600/30 transition"
                 >
                   ✏️ Editar
                 </button>
 
                 <button
                   onClick={() => handleDelete(item)}
-                  className="bg-red-600/20 text-red-400 px-3 py-1.5 rounded-lg text-sm hover:bg-red-600/30 transition"
+                  className="flex-1 sm:flex-none bg-red-600/20 text-red-400 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-red-600/30 transition"
                 >
                   🗑️ Eliminar
                 </button>
@@ -420,9 +420,9 @@ export default function MenuItemManager() {
 
       {/* Modal de formulario */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-black/90 border-2 border-gold-600 rounded-xl p-6 w-full max-w-lg my-8">
-            <h3 className="text-xl font-cinzel text-gold-400 mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-black/90 border-2 border-gold-600 rounded-xl p-4 sm:p-6 w-full max-w-lg my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg sm:text-xl font-cinzel text-gold-400 mb-3 sm:mb-4">
               {editingItem ? 'Editar Item' : 'Nuevo Item'}
             </h3>
 

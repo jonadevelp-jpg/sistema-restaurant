@@ -2,104 +2,14 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import CategoryManager from '../../react/components/CategoryManager';
 import MenuItemManager from '../../react/components/MenuItemManager';
-import { supabase } from '../../lib/supabase';
-
-// Verificar autenticación
-const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-if (authError || !user) {
-  return Astro.redirect('/admin/login');
-}
-
-// Verificar que el usuario tenga rol de admin o encargado
-const { data: userProfile } = await supabase
-  .from('users')
-  .select('role')
-  .eq('id', user.id)
-  .single();
-
-if (!userProfile || !['admin', 'encargado'].includes(userProfile.role)) {
-  return Astro.redirect('/admin/login');
-}
+import MenuAuthGuard from '../../react/components/MenuAuthGuard';
 
 // Obtener tab activo de la URL
 const activeTab = Astro.url.searchParams.get('tab') || 'items';
 ---
 
 <AdminLayout title="Gestión del Menú - Admin">
-  <div class="min-h-screen p-4 md:p-8">
-    <div class="max-w-7xl mx-auto">
-      <!-- Header -->
-      <header class="mb-8">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 class="text-2xl md:text-4xl font-cinzel text-gold-400">Gestión del Menú</h1>
-            <p class="text-gold-300/70 mt-1">Administra productos, categorías y precios</p>
-          </div>
-          <div class="flex gap-3">
-            <a 
-              href="/" 
-              target="_blank"
-              class="bg-black/50 text-gold-400 px-4 py-2 rounded-lg hover:bg-black/70 transition flex items-center gap-2 border border-gold-600"
-            >
-              👁️ Ver Menú
-            </a>
-            <a 
-              href="/menu-imprimible" 
-              target="_blank"
-              class="bg-black/50 text-gold-400 px-4 py-2 rounded-lg hover:bg-black/70 transition flex items-center gap-2 border border-gold-600"
-            >
-              🖨️ Versión Imprimible
-            </a>
-          </div>
-        </div>
-
-        <!-- Tabs de navegación -->
-        <nav class="flex gap-2 border-b-2 border-gold-600/30 pb-0">
-          <a 
-            href="/admin/menu?tab=items"
-            class={`px-6 py-3 rounded-t-lg transition font-medium ${
-              activeTab === 'items' 
-                ? 'bg-gold-600 text-black' 
-                : 'bg-black/50 text-gold-400 hover:bg-black/70'
-            }`}
-          >
-            🍽️ Items del Menú
-          </a>
-          <a 
-            href="/admin/menu?tab=categories"
-            class={`px-6 py-3 rounded-t-lg transition font-medium ${
-              activeTab === 'categories' 
-                ? 'bg-gold-600 text-black' 
-                : 'bg-black/50 text-gold-400 hover:bg-black/70'
-            }`}
-          >
-            📁 Categorías
-          </a>
-        </nav>
-      </header>
-
-      <!-- Contenido según tab activo -->
-      <div class="bg-black/30 p-4 md:p-6 rounded-lg border-2 border-gold-600">
-        {activeTab === 'items' && (
-          <MenuItemManager client:load />
-        )}
-        {activeTab === 'categories' && (
-          <CategoryManager client:load />
-        )}
-      </div>
-
-      <!-- Información adicional -->
-      <div class="mt-8 bg-black/30 border border-gold-600/30 rounded-lg p-4">
-        <h3 class="text-gold-400 font-semibold mb-2">💡 Consejos</h3>
-        <ul class="text-gold-300/80 text-sm space-y-1">
-          <li>• Los cambios se reflejan inmediatamente en el menú público y la versión imprimible</li>
-          <li>• Usa "Ocultar" para items temporalmente no disponibles (no los pierdas)</li>
-          <li>• Las imágenes se optimizan automáticamente y cargan rápido</li>
-          <li>• Puedes reordenar items y categorías cambiando el número de "Orden"</li>
-        </ul>
-      </div>
-    </div>
-  </div>
+  <MenuAuthGuard client:load activeTab={activeTab} />
 </AdminLayout>
+
 

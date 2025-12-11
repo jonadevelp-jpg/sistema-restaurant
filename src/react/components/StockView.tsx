@@ -60,90 +60,139 @@ export default function StockView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Gestión de Stock</h1>
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Gestión de Stock</h1>
         <button
           onClick={() => window.location.href = '/admin/ingredientes'}
-          className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          className="w-full sm:w-auto px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm sm:text-base"
         >
           ➕ Agregar Ingrediente
         </button>
       </div>
 
       {/* Buscador */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <input
           type="text"
           placeholder="Buscar ingrediente..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border border-slate-300 rounded-lg"
+          className="w-full px-3 sm:px-4 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
         />
       </div>
 
-      {/* Tabla de stock */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Ingrediente</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Unidad</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock Actual</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock Mínimo</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Estado</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Precio Unit.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Proveedor</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filteredIngredientes.map((ing) => {
-              const status = getStockStatus(ing.stock_actual, ing.stock_minimo);
-              return (
-                <tr key={ing.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-sm font-medium">{ing.nombre}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{ing.unidad_medida}</td>
-                  <td className="px-4 py-3 text-sm font-semibold">{ing.stock_actual}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{ing.stock_minimo}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}
-                    >
-                      {status.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm">{formatCLP(ing.precio_unitario)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
-                    {ing.suppliers?.name || '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedIngrediente(ing);
-                          setShowEditModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+      {/* Vista móvil - Cards */}
+      <div className="md:hidden space-y-3">
+        {filteredIngredientes.map((ing) => {
+          const status = getStockStatus(ing.stock_actual, ing.stock_minimo);
+          return (
+            <div key={ing.id} className="bg-white rounded-lg shadow-md p-4 border border-slate-200">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">{ing.nombre}</h3>
+                  <p className="text-xs text-slate-600">{ing.unidad_medida}</p>
+                </div>
+                <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${status.color}`}>
+                  {status.label}
+                </span>
+              </div>
+              <div className="space-y-1 text-xs sm:text-sm mb-3">
+                <p><span className="font-medium">Stock:</span> {ing.stock_actual} / Mín: {ing.stock_minimo}</p>
+                <p><span className="font-medium">Precio:</span> {formatCLP(ing.precio_unitario)}</p>
+                {ing.suppliers && (
+                  <p><span className="font-medium">Proveedor:</span> {ing.suppliers.name}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedIngrediente(ing);
+                    setShowEditModal(true);
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                >
+                  ✏️ Editar
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedIngrediente(ing);
+                    setShowAjusteModal(true);
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                >
+                  📊 Ajustar
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Vista desktop - Tabla */}
+      <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Ingrediente</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Unidad</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock Actual</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock Mínimo</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Estado</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Precio Unit.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Proveedor</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {filteredIngredientes.map((ing) => {
+                const status = getStockStatus(ing.stock_actual, ing.stock_minimo);
+                return (
+                  <tr key={ing.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm font-medium">{ing.nombre}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{ing.unidad_medida}</td>
+                    <td className="px-4 py-3 text-sm font-semibold">{ing.stock_actual}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{ing.stock_minimo}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}
                       >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedIngrediente(ing);
-                          setShowAjusteModal(true);
-                        }}
-                        className="text-green-600 hover:text-green-800 text-sm"
-                      >
-                        📊 Ajustar
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{formatCLP(ing.precio_unitario)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {ing.suppliers?.name || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedIngrediente(ing);
+                            setShowEditModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedIngrediente(ing);
+                            setShowAjusteModal(true);
+                          }}
+                          className="text-green-600 hover:text-green-800 text-sm"
+                        >
+                          📊 Ajustar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showEditModal && selectedIngrediente && (
@@ -418,4 +467,5 @@ function AjusteStockModal({
     </div>
   );
 }
+
 

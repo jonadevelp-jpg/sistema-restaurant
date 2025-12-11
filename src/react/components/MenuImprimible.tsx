@@ -100,20 +100,20 @@ export default function MenuImprimible({ categorySlug }: MenuImprimibleProps) {
 
   if (!selectedCategory) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] p-6">
+      <div className="w-full min-h-screen bg-[#0a0a0a] p-3 sm:p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-[#d4af37] mb-8 text-center font-cinzel">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#d4af37] mb-4 sm:mb-6 md:mb-8 text-center font-cinzel">
             Seleccionar Categoría para Imprimir
           </h1>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat)}
-                className="p-6 border-2 border-[#d4af37] rounded-lg hover:bg-[#d4af37]/10 text-left transition-all hover:scale-105"
+                className="p-3 sm:p-4 md:p-6 border-2 border-[#d4af37] rounded-lg hover:bg-[#d4af37]/10 text-left transition-all hover:scale-105"
               >
-                <div className="font-semibold text-white text-lg mb-2">{cat.name}</div>
-                <div className="text-[#d4af37] text-sm">Clic para ver menú</div>
+                <div className="font-semibold text-white text-sm sm:text-base md:text-lg mb-1 sm:mb-2">{cat.name}</div>
+                <div className="text-[#d4af37] text-xs sm:text-sm">Clic para ver menú</div>
               </button>
             ))}
           </div>
@@ -125,19 +125,19 @@ export default function MenuImprimible({ categorySlug }: MenuImprimibleProps) {
   return (
     <>
       {/* Botón de impresión - solo visible en pantalla */}
-      <div className="no-print p-6 bg-slate-100">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Menú Imprimible - {selectedCategory.name}</h1>
-          <div className="flex gap-3">
+      <div className="no-print p-3 sm:p-4 md:p-6 bg-slate-100">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Menú Imprimible - {selectedCategory.name}</h1>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setSelectedCategory(null)}
-              className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-white"
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 border border-slate-300 rounded-lg hover:bg-white text-sm sm:text-base"
             >
               ← Cambiar Categoría
             </button>
             <button
               onClick={handlePrint}
-              className="px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm sm:text-base"
             >
               🖨️ Imprimir
             </button>

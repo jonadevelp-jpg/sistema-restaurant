@@ -70,31 +70,31 @@ export default function RecetasView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Recetas</h1>
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Recetas</h1>
         <button
           onClick={() => {
             setEditing(null);
             setShowForm(true);
           }}
-          className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          className="w-full sm:w-auto px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm sm:text-base"
         >
           ➕ Nueva Receta
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {recetas.map((receta) => (
           <div
             key={receta.id}
-            className="bg-white rounded-lg shadow-md p-6 border border-slate-200"
+            className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-slate-200"
           >
             <div className="flex justify-between items-start mb-3">
-              <div>
-                <h3 className="font-semibold text-lg">{receta.nombre}</h3>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base sm:text-lg truncate">{receta.nombre}</h3>
                 {receta.menu_items && (
-                  <p className="text-sm text-slate-600">
+                  <p className="text-xs sm:text-sm text-slate-600 truncate">
                     Item: {receta.menu_items.name}
                   </p>
                 )}
@@ -216,36 +216,36 @@ function RecetaFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">
           {receta ? 'Editar' : 'Nueva'} Receta
         </h2>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Nombre *</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Nombre *</label>
             <input
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Descripción</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Descripción</label>
             <textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
               rows={3}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Item del Menú (opcional)</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Item del Menú (opcional)</label>
             <select
               value={menuItemId}
               onChange={(e) => setMenuItemId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="">Sin item del menú</option>
               {menuItems.map((item) => (
@@ -256,26 +256,26 @@ function RecetaFormModal({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Porciones</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1">Porciones</label>
             <input
               type="number"
               value={porciones}
               onChange={(e) => setPorciones(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             />
           </div>
         </div>
-        <div className="flex gap-3 mt-6">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 text-sm sm:text-base"
           >
             {loading ? 'Guardando...' : 'Guardar'}
           </button>
@@ -354,13 +354,13 @@ function IngredientesRecetaModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Ingredientes - {receta.nombre}</h2>
-        <div className="mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-2xl w-full my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Ingredientes - {receta.nombre}</h2>
+        <div className="mb-3 sm:mb-4">
           <button
             onClick={() => setShowAdd(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm sm:text-base"
           >
             ➕ Agregar Ingrediente
           </button>
@@ -378,17 +378,17 @@ function IngredientesRecetaModal({
           {ingredientes.map((ri) => (
             <div
               key={ri.id}
-              className="flex justify-between items-center p-3 border border-slate-200 rounded-lg"
+              className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 p-2 sm:p-3 border border-slate-200 rounded-lg"
             >
-              <div>
-                <div className="font-medium">{ri.ingredientes?.nombre}</div>
-                <div className="text-sm text-slate-600">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm sm:text-base">{ri.ingredientes?.nombre}</div>
+                <div className="text-xs sm:text-sm text-slate-600">
                   {ri.cantidad} {ri.unidad_medida}
                 </div>
               </div>
               <button
                 onClick={() => removeIngrediente(ri.id)}
-                className="text-red-600 hover:text-red-800"
+                className="text-red-600 hover:text-red-800 text-sm sm:text-base self-end sm:self-center"
               >
                 🗑️
               </button>
@@ -396,10 +396,10 @@ function IngredientesRecetaModal({
           ))}
         </div>
 
-        <div className="mt-6 flex gap-3">
+        <div className="mt-4 sm:mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+            className="w-full px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
           >
             Cerrar
           </button>
@@ -437,14 +437,14 @@ function AddIngredienteForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4 p-4 bg-slate-50 rounded-lg">
-      <div className="grid grid-cols-2 gap-3">
+    <form onSubmit={handleSubmit} className="mb-3 sm:mb-4 p-3 sm:p-4 bg-slate-50 rounded-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         <div>
-          <label className="block text-sm font-medium mb-1">Ingrediente</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">Ingrediente</label>
           <select
             value={ingredienteId}
             onChange={(e) => setIngredienteId(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
           >
             <option value="">Seleccionar...</option>
             {ingredientes.map((ing) => (
@@ -455,27 +455,27 @@ function AddIngredienteForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Cantidad</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">Cantidad</label>
           <input
             type="number"
             step="0.01"
             value={cantidad}
             onChange={(e) => setCantidad(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
           />
         </div>
       </div>
-      <div className="flex gap-2 mt-3">
+      <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-3">
         <button
           type="submit"
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          className="flex-1 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm sm:text-base"
         >
           Agregar
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+          className="flex-1 px-3 sm:px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
         >
           Cancelar
         </button>
@@ -483,4 +483,5 @@ function AddIngredienteForm({
     </form>
   );
 }
+
 

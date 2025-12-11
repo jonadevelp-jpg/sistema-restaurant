@@ -49,11 +49,21 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
   const [mesaInfo, setMesaInfo] = useState<{ numero: number } | null>(null);
 
   useEffect(() => {
-    loadData();
+    if (ordenId) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
   }, [ordenId]);
 
   async function loadData() {
+    if (!ordenId) {
+      setLoading(false);
+      return;
+    }
+
     try {
+      setLoading(true);
       // Cargar orden con información de mesa
       const { data: ordenData, error: ordenError } = await supabase
         .from('ordenes_restaurante')
@@ -61,7 +71,17 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         .eq('id', ordenId)
         .single();
 
-      if (ordenError) throw ordenError;
+      if (ordenError) {
+        console.error('Error cargando orden:', ordenError);
+        setLoading(false);
+        return;
+      }
+
+      if (!ordenData) {
+        setLoading(false);
+        return;
+      }
+
       setOrden(ordenData);
       if (ordenData.mesas) {
         setMesaInfo(ordenData.mesas);
@@ -96,7 +116,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       if (catsData) setCategories(catsData);
 
       // Cargar items del menú con categorías
-      const { data: menuData } = await supabase
+      const { data: menuData, error: menuError } = await supabase
         .from('menu_items')
         .select('*')
         .eq('is_available', true)
@@ -104,7 +124,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
       if (menuData) setMenuItems(menuData);
     } catch (error: any) {
-      alert('Error cargando datos: ' + error.message);
+      console.error('Error cargando datos:', error);
+      alert('Error cargando orden: ' + (error.message || 'Error desconocido'));
     } finally {
       setLoading(false);
     }
@@ -265,8 +286,23 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     );
   }
 
+  if (!ordenId) {
+    return (
+      <div className="p-6">
+        <div className="text-red-600">Error: No se proporcionó un ID de orden</div>
+      </div>
+    );
+  }
+
   if (!orden) {
-    return <div className="p-6">Orden no encontrada</div>;
+    return (
+      <div className="p-6">
+        <div className="text-red-600">Orden no encontrada</div>
+        <a href="/admin/mesas" className="text-blue-600 hover:underline mt-2 inline-block">
+          Volver a Mesas
+        </a>
+      </div>
+    );
   }
 
   return (
@@ -325,18 +361,18 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Menú de items */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold mb-4">Agregar Items</h2>
+          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 md:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Agregar Items</h2>
 
             {/* Filtro de categorías */}
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg"
+                className="w-full px-3 sm:px-4 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
               >
                 <option value="all">Todas las categorías</option>
                 {categories.map((cat) => (
@@ -348,14 +384,14 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
             </div>
 
             {/* Grid de items */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-h-96 overflow-y-auto">
               {filteredMenuItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => addItem(item)}
-                  className="p-3 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 text-left"
+                  className="p-2 sm:p-3 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 text-left"
                 >
-                  <div className="font-semibold text-sm">{item.name}</div>
+                  <div className="font-semibold text-xs sm:text-sm line-clamp-2">{item.name}</div>
                   <div className="text-xs text-slate-600 mt-1">
                     {formatCLP(item.price)}
                   </div>
@@ -367,10 +403,10 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
         {/* Resumen de orden */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-            <h2 className="text-lg font-semibold mb-4">Resumen de Orden</h2>
+          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 md:p-6 lg:sticky lg:top-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Resumen de Orden</h2>
 
-            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4 max-h-64 overflow-y-auto">
               {items.length === 0 ? (
                 <p className="text-slate-500 text-sm">No hay items en la orden</p>
               ) : (
@@ -379,38 +415,38 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                     key={item.id}
                     className="flex justify-between items-start p-2 border-b border-slate-200"
                   >
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-xs sm:text-sm truncate">
                         {item.menu_item?.name || 'Item'}
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
                         <button
                           onClick={() =>
                             updateItemCantidad(item.id!, item.cantidad - 1)
                           }
-                          className="w-6 h-6 flex items-center justify-center border border-slate-300 rounded hover:bg-slate-100"
+                          className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center border border-slate-300 rounded hover:bg-slate-100 text-xs sm:text-sm"
                         >
                           -
                         </button>
-                        <span className="text-sm w-8 text-center">{item.cantidad}</span>
+                        <span className="text-xs sm:text-sm w-6 sm:w-8 text-center">{item.cantidad}</span>
                         <button
                           onClick={() =>
                             updateItemCantidad(item.id!, item.cantidad + 1)
                           }
-                          className="w-6 h-6 flex items-center justify-center border border-slate-300 rounded hover:bg-slate-100"
+                          className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center border border-slate-300 rounded hover:bg-slate-100 text-xs sm:text-sm"
                         >
                           +
                         </button>
                         <button
                           onClick={() => removeItem(item.id!)}
-                          className="ml-2 text-red-600 hover:text-red-800 text-xs"
+                          className="ml-1 sm:ml-2 text-red-600 hover:text-red-800 text-xs"
                         >
                           🗑️
                         </button>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-sm">
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <div className="font-semibold text-xs sm:text-sm">
                         {formatCLP(item.subtotal)}
                       </div>
                     </div>
@@ -419,8 +455,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
               )}
             </div>
 
-            <div className="border-t border-slate-300 pt-4">
-              <div className="flex justify-between items-center text-lg font-bold">
+            <div className="border-t border-slate-300 pt-3 sm:pt-4">
+              <div className="flex justify-between items-center text-base sm:text-lg font-bold">
                 <span>Total:</span>
                 <span>{formatCLP(orden.total)}</span>
               </div>
@@ -431,7 +467,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
       {/* Modal de Comanda Cocina */}
       {showComanda && orden && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print">
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <ComandaCocina
               orden={{ ...orden, mesas: mesaInfo || undefined }}
@@ -444,7 +480,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
       {/* Modal de Boleta Cliente */}
       {showBoleta && orden && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print">
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <BoletaCliente
               orden={{ ...orden, mesas: mesaInfo || undefined }}

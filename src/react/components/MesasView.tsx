@@ -98,45 +98,45 @@ export default function MesasView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Mesas (POS)</h1>
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Mesas (POS)</h1>
         <button
           onClick={loadData}
-          className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+          className="w-full sm:w-auto px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm sm:text-base"
         >
           🔄 Actualizar
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
         {mesas.map((mesa) => {
           const orden = getMesaOrden(mesa.id);
           return (
             <button
               key={mesa.id}
               onClick={() => handleMesaClick(mesa)}
-              className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
+              className={`p-2 sm:p-3 md:p-4 rounded-lg border-2 transition-all hover:shadow-lg ${
                 orden
                   ? 'border-red-300 bg-red-50'
                   : 'border-green-300 bg-green-50 hover:border-green-400'
               }`}
             >
               <div className="text-center">
-                <div className="text-3xl font-bold mb-2">🪑</div>
-                <div className="font-semibold text-lg">Mesa {mesa.numero}</div>
-                <div className="text-sm text-slate-600 mt-1">
-                  Capacidad: {mesa.capacidad}
+                <div className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">🪑</div>
+                <div className="font-semibold text-sm sm:text-base md:text-lg">Mesa {mesa.numero}</div>
+                <div className="text-xs sm:text-sm text-slate-600 mt-1">
+                  Cap: {mesa.capacidad}
                 </div>
                 <div
-                  className={`mt-2 px-2 py-1 rounded text-xs font-medium border ${getEstadoColor(
+                  className={`mt-1 sm:mt-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium border ${getEstadoColor(
                     orden ? 'ocupada' : mesa.estado
                   )}`}
                 >
                   {orden ? 'Ocupada' : 'Libre'}
                 </div>
                 {orden && (
-                  <div className="mt-2 text-sm font-semibold text-red-700">
+                  <div className="mt-1 sm:mt-2 text-xs sm:text-sm font-semibold text-red-700">
                     {formatCLP(orden.total)}
                   </div>
                 )}
@@ -218,23 +218,23 @@ function OrdenFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4">Crear Orden - Mesa {mesa.numero}</h2>
-        <p className="text-slate-600 mb-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full">
+        <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Crear Orden - Mesa {mesa.numero}</h2>
+        <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6">
           ¿Deseas crear una nueva orden para esta mesa?
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm sm:text-base"
           >
             Cancelar
           </button>
           <button
             onClick={handleCreateOrden}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 text-sm sm:text-base"
           >
             {loading ? 'Creando...' : 'Crear Orden'}
           </button>
@@ -243,4 +243,5 @@ function OrdenFormModal({
     </div>
   );
 }
+
 

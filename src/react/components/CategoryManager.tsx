@@ -203,20 +203,20 @@ export default function CategoryManager() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl font-cinzel text-gold-400">Categorías del Menú</h2>
-          <p className="text-gold-300/70 text-sm mt-1">
+          <h2 className="text-lg sm:text-xl font-cinzel text-gold-400">Categorías del Menú</h2>
+          <p className="text-gold-300/70 text-xs sm:text-sm mt-1">
             Administra las secciones de tu menú
           </p>
         </div>
         <button
           onClick={openNewForm}
-          className="bg-gold-600 hover:bg-gold-500 text-black px-4 py-2 rounded-lg transition flex items-center gap-2"
+          className="w-full sm:w-auto bg-gold-600 hover:bg-gold-500 text-black px-3 sm:px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 text-sm sm:text-base"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Nueva Categoría
@@ -224,38 +224,38 @@ export default function CategoryManager() {
       </div>
 
       {/* Lista de categorías */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {categories.map((category) => (
           <div
             key={category.id}
             className={`
-              bg-black/30 border rounded-lg p-4 transition
+              bg-black/30 border rounded-lg p-3 sm:p-4 transition
               ${category.is_active ? 'border-gold-600' : 'border-gray-600 opacity-60'}
             `}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-gold-400/60 text-sm font-mono">#{category.order_num}</span>
-                  <h3 className="text-gold-400 font-bold text-lg">{category.name}</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="text-gold-400/60 text-xs sm:text-sm font-mono">#{category.order_num}</span>
+                  <h3 className="text-gold-400 font-bold text-base sm:text-lg">{category.name}</h3>
                   {!category.is_active && (
-                    <span className="bg-gray-600 text-gray-300 px-2 py-0.5 rounded text-xs">
+                    <span className="bg-gray-600 text-gray-300 px-1.5 sm:px-2 py-0.5 rounded text-xs">
                       Oculta
                     </span>
                   )}
                 </div>
                 {category.description && (
-                  <p className="text-gold-300/70 text-sm mt-1">{category.description}</p>
+                  <p className="text-gold-300/70 text-xs sm:text-sm mt-1">{category.description}</p>
                 )}
                 <p className="text-gold-400/50 text-xs mt-1 font-mono">/{category.slug}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Toggle visible/oculta */}
                 <button
                   onClick={() => handleToggleActive(category)}
                   className={`
-                    px-3 py-1.5 rounded-lg text-sm transition
+                    flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition
                     ${category.is_active 
                       ? 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30' 
                       : 'bg-gray-600/20 text-gray-400 hover:bg-gray-600/30'
@@ -269,7 +269,7 @@ export default function CategoryManager() {
                 {/* Editar */}
                 <button
                   onClick={() => openEditForm(category)}
-                  className="bg-gold-600/20 text-gold-400 px-3 py-1.5 rounded-lg text-sm hover:bg-gold-600/30 transition"
+                  className="flex-1 sm:flex-none bg-gold-600/20 text-gold-400 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-gold-600/30 transition"
                 >
                   ✏️ Editar
                 </button>
@@ -277,9 +277,9 @@ export default function CategoryManager() {
                 {/* Eliminar */}
                 <button
                   onClick={() => handleDelete(category)}
-                  className="bg-red-600/20 text-red-400 px-3 py-1.5 rounded-lg text-sm hover:bg-red-600/30 transition"
+                  className="flex-1 sm:flex-none bg-red-600/20 text-red-400 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-red-600/30 transition"
                 >
-                  🗑️
+                  🗑️ Eliminar
                 </button>
               </div>
             </div>
@@ -296,9 +296,9 @@ export default function CategoryManager() {
 
       {/* Modal de formulario */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-black/90 border-2 border-gold-600 rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-cinzel text-gold-400 mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-black/90 border-2 border-gold-600 rounded-xl p-4 sm:p-6 w-full max-w-md my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg sm:text-xl font-cinzel text-gold-400 mb-3 sm:mb-4">
               {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
             </h3>
 

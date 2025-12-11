@@ -8,9 +8,11 @@ export async function getStaticPaths() {
 }
 
 const { id } = Astro.params;
+const ordenId = id || '';
 ---
 
 <AdminLayout title="Orden">
-  <OrdenForm ordenId={id!} client:load />
+  <OrdenForm ordenId={ordenId} client:only="react" />
 </AdminLayout>
+
 

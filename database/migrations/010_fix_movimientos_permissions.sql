@@ -29,3 +29,4 @@ FROM pg_policies
 WHERE tablename = 'movimientos_stock'
 ORDER BY policyname;
 
+

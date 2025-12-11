@@ -200,3 +200,4 @@ Ver instrucciones detalladas en: `INSTRUCCIONES_PERMISOS.md`
 
 **¡El sistema está listo para usar!** 🎊
 
+

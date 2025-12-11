@@ -44,3 +44,4 @@ WHERE image_url IS NOT NULL
 ORDER BY updated_at DESC
 LIMIT 10;
 
+

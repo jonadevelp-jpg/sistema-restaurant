@@ -101,23 +101,23 @@ export default function OrdenesListView() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Órdenes</h1>
-        <div className="text-lg font-semibold text-green-600">
+    <div className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Órdenes</h1>
+        <div className="text-base sm:text-lg font-semibold text-green-600">
           Total Ventas: {formatCLP(totalVentas)}
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Filtro por Estado</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Filtro por Estado</label>
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="all">Todas</option>
               <option value="pending">Pendientes</option>
@@ -129,11 +129,11 @@ export default function OrdenesListView() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Filtro por Fecha</label>
+            <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Filtro por Fecha</label>
             <select
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="today">Hoy</option>
               <option value="week">Última Semana</option>
@@ -144,59 +144,100 @@ export default function OrdenesListView() {
         </div>
       </div>
 
-      {/* Tabla de órdenes */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Orden</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Mesa</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Mesero</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Total</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Estado</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Pago</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {ordenes.map((orden) => (
-              <tr key={orden.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 text-sm font-medium">{orden.numero_orden}</td>
-                <td className="px-4 py-3 text-sm">
-                  {orden.mesas ? `Mesa ${orden.mesas.numero}` : '-'}
-                </td>
-                <td className="px-4 py-3 text-sm">{orden.users?.name || '-'}</td>
-                <td className="px-4 py-3 text-sm">
-                  {new Date(orden.created_at).toLocaleString('es-CL')}
-                </td>
-                <td className="px-4 py-3 text-sm font-semibold">
-                  {formatCLP(orden.total)}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
-                      orden.estado
-                    )}`}
-                  >
-                    {orden.estado}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {orden.metodo_pago || '-'}
-                </td>
-                <td className="px-4 py-3">
-                  <a
-                    href={`/admin/ordenes/${orden.id}`}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Ver
-                  </a>
-                </td>
+      {/* Vista móvil - Cards */}
+      <div className="md:hidden space-y-3">
+        {ordenes.map((orden) => (
+          <div key={orden.id} className="bg-white rounded-lg shadow-md p-4 border border-slate-200">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm truncate">{orden.numero_orden}</h3>
+                {orden.mesas && (
+                  <p className="text-xs text-slate-600">Mesa {orden.mesas.numero}</p>
+                )}
+                {orden.users && (
+                  <p className="text-xs text-slate-600">Mesero: {orden.users.name}</p>
+                )}
+              </div>
+              <span
+                className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${getEstadoColor(
+                  orden.estado
+                )}`}
+              >
+                {orden.estado}
+              </span>
+            </div>
+            <div className="space-y-1 text-xs sm:text-sm mb-3">
+              <p><span className="font-medium">Fecha:</span> {new Date(orden.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</p>
+              <p><span className="font-medium">Total:</span> {formatCLP(orden.total)}</p>
+              {orden.metodo_pago && (
+                <p><span className="font-medium">Pago:</span> {orden.metodo_pago}</p>
+              )}
+            </div>
+            <a
+              href={`/admin/ordenes/${orden.id}`}
+              className="block w-full text-center px-3 py-2 bg-slate-600 text-white rounded text-xs sm:text-sm hover:bg-slate-700"
+            >
+              Ver Detalles
+            </a>
+          </div>
+        ))}
+      </div>
+
+      {/* Vista desktop - Tabla */}
+      <div className="hidden md:block bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Orden</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Mesa</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Mesero</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Total</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Estado</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Pago</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {ordenes.map((orden) => (
+                <tr key={orden.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-sm font-medium">{orden.numero_orden}</td>
+                  <td className="px-4 py-3 text-sm">
+                    {orden.mesas ? `Mesa ${orden.mesas.numero}` : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm">{orden.users?.name || '-'}</td>
+                  <td className="px-4 py-3 text-sm">
+                    {new Date(orden.created_at).toLocaleString('es-CL')}
+                  </td>
+                  <td className="px-4 py-3 text-sm font-semibold">
+                    {formatCLP(orden.total)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${getEstadoColor(
+                        orden.estado
+                      )}`}
+                    >
+                      {orden.estado}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {orden.metodo_pago || '-'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <a
+                      href={`/admin/ordenes/${orden.id}`}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      Ver
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {ordenes.length === 0 && (

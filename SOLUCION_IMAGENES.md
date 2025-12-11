@@ -122,3 +122,4 @@ Te mostrará:
 
 **Si después de esto las imágenes aún no se ven, ejecuta el endpoint de verificación y comparte el resultado.**
 
+
