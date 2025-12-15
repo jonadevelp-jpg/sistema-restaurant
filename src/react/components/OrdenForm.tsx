@@ -357,11 +357,18 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       const propina = conPropina ? orden.total * 0.1 : 0;
       const totalFinal = orden.total + propina;
 
+      // Mapear método de pago a valores permitidos en la BD
+      // La BD solo permite: 'EFECTIVO', 'TARJETA', 'TRANSFERENCIA'
+      let metodoPagoBD = metodoPago.toUpperCase();
+      if (metodoPagoBD === 'DÉBITO' || metodoPagoBD === 'DEBITO' || metodoPagoBD === 'CRÉDITO' || metodoPagoBD === 'CREDITO') {
+        metodoPagoBD = 'TARJETA';
+      }
+
       const { error } = await supabase
         .from('ordenes_restaurante')
         .update({
           estado: 'paid',
-          metodo_pago: metodoPago.toUpperCase(),
+          metodo_pago: metodoPagoBD,
           paid_at: new Date().toISOString(),
           total: totalFinal,
         })
@@ -737,8 +744,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
               >
                 <option value="">Selecciona método de pago</option>
                 <option value="EFECTIVO">Efectivo</option>
-                <option value="DÉBITO">Débito</option>
-                <option value="CRÉDITO">Crédito</option>
+                <option value="TARJETA">Tarjeta (Débito/Crédito)</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
               </select>
             </div>
 

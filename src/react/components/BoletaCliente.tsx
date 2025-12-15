@@ -79,20 +79,45 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
       style: 'currency',
       currency: 'CLP',
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(Math.round(price));
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-  // En Chile, el IVA es 19%
-  const iva = subtotal * 0.19;
-  // Calcular propina sugerida (10%)
-  const propina = subtotal * 0.1;
-  // Total sin propina
-  const totalSinPropina = subtotal + iva;
-  // Total con propina (mostrar en grande)
-  const totalConPropina = totalSinPropina + propina;
-  // Usar el total de la orden si está disponible (puede incluir propina)
-  const total = orden.total || totalConPropina;
+  // Los precios ya incluyen IVA (19% en Chile)
+  // Calcular precio sin IVA: precio_con_iva / 1.19
+  // Calcular IVA: precio_con_iva - precio_sin_iva
+  
+  const calcularDesgloseIVA = (precioConIVA: number) => {
+    // Precio sin IVA = precio con IVA / 1.19
+    const precioSinIVA = precioConIVA / 1.19;
+    // IVA = precio con IVA - precio sin IVA
+    const iva = precioConIVA - precioSinIVA;
+    return {
+      sinIVA: precioSinIVA,
+      iva: iva,
+      conIVA: precioConIVA
+    };
+  };
+
+  // Calcular subtotal sin IVA (suma de todos los items sin IVA)
+  const subtotalSinIVA = items.reduce((sum, item) => {
+    const desglose = calcularDesgloseIVA(item.subtotal);
+    return sum + desglose.sinIVA;
+  }, 0);
+
+  // Calcular IVA total
+  const ivaTotal = items.reduce((sum, item) => {
+    const desglose = calcularDesgloseIVA(item.subtotal);
+    return sum + desglose.iva;
+  }, 0);
+
+  // Total = suma de todos los subtotales (que ya incluyen IVA)
+  const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+
+  // Calcular propina sugerida (10% del total)
+  const propina = total * 0.1;
+
+  // Total con propina
+  const totalConPropina = total + propina;
 
   return (
     <>
@@ -140,15 +165,20 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             <span>Descripción</span>
             <span>Total</span>
           </div>
-          {items.map((item) => (
-            <div key={item.id} className="boleta-item">
-              <span className="boleta-item-cantidad">{item.cantidad}</span>
-              <span className="boleta-item-descripcion">
-                {item.menu_item?.name || 'Item'}
-              </span>
-              <span className="boleta-item-total">{formatPrice(item.subtotal)}</span>
-            </div>
-          ))}
+          {items.map((item) => {
+            const desglose = calcularDesgloseIVA(item.subtotal);
+            return (
+              <div key={item.id} style={{ marginBottom: '4px' }}>
+                <div className="boleta-item">
+                  <span className="boleta-item-cantidad">{item.cantidad}</span>
+                  <span className="boleta-item-descripcion">
+                    {item.menu_item?.name || 'Item'}
+                  </span>
+                  <span className="boleta-item-total">{formatPrice(desglose.sinIVA)}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="boleta-separator"></div>
@@ -156,23 +186,23 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
         {/* Totales */}
         <div className="boleta-totales">
           <div className="boleta-total-line">
-            <span>Subtotal:</span>
-            <span>{formatPrice(subtotal)}</span>
+            <span>Monto Neto:</span>
+            <span>{formatPrice(subtotalSinIVA)}</span>
           </div>
           <div className="boleta-total-line">
             <span>IVA (19%):</span>
-            <span>{formatPrice(iva)}</span>
+            <span>{formatPrice(ivaTotal)}</span>
           </div>
-          <div className="boleta-total-line" style={{ fontSize: '8pt', color: '#666' }}>
-            <span>Total (sin propina):</span>
-            <span>{formatPrice(totalSinPropina)}</span>
+          <div className="boleta-total-line boleta-total-final">
+            <span>TOTAL:</span>
+            <span>{formatPrice(total)}</span>
           </div>
           <div className="boleta-total-line" style={{ fontSize: '8pt', color: '#666' }}>
             <span>Propina sugerida (10%):</span>
             <span>{formatPrice(propina)}</span>
           </div>
-          <div className="boleta-total-line boleta-total-final">
-            <span>TOTAL:</span>
+          <div className="boleta-total-line boleta-total-final" style={{ fontSize: '12pt' }}>
+            <span>TOTAL CON PROPINA:</span>
             <span>{formatPrice(totalConPropina)}</span>
           </div>
         </div>
@@ -328,6 +358,14 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             font-size: 8pt !important;
           }
 
+          .boleta-item-desglose {
+            font-size: 7pt !important;
+            color: #666 !important;
+            margin-left: 25px !important;
+            margin-top: 1px !important;
+            margin-bottom: 2px !important;
+          }
+
           .boleta-totales {
             margin: 8px 0 !important;
             font-size: 9pt !important;
@@ -467,6 +505,14 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           .boleta-item-total {
             text-align: right;
             font-weight: bold;
+          }
+
+          .boleta-item-desglose {
+            font-size: 8pt;
+            color: #666;
+            margin-left: 35px;
+            margin-top: 2px;
+            margin-bottom: 4px;
           }
 
           .boleta-totales {
