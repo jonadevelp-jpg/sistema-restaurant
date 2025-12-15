@@ -12,6 +12,13 @@ export default function Dashboard() {
     mesasOcupadas: 0,
     gastosMes: 0,
   });
+  const [stockBajo, setStockBajo] = useState<Array<{
+    id: string;
+    nombre: string;
+    stock_actual: number;
+    stock_minimo: number;
+    unidad_medida: string;
+  }>>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -88,6 +95,22 @@ export default function Dashboard() {
         const totalGastos = 
           (gastosMes?.reduce((sum, g) => sum + (g.monto || 0), 0) || 0) +
           (gastosGenerales?.reduce((sum, g) => sum + (g.monto || 0), 0) || 0);
+
+        // Verificar stock bajo
+        const { data: ingredientes, error: errorStock } = await supabase
+          .from('ingredientes')
+          .select('id, nombre, stock_actual, stock_minimo, unidad_medida')
+          .not('stock_minimo', 'is', null);
+
+        if (errorStock) {
+          console.error('Error cargando stock:', errorStock);
+        } else {
+          // Filtrar ingredientes con stock bajo (stock_actual <= stock_minimo)
+          const stockBajoList = ingredientes?.filter(
+            (ing) => ing.stock_actual <= ing.stock_minimo
+          ) || [];
+          setStockBajo(stockBajoList);
+        }
 
         setKpis({
           ventasHoy,
@@ -188,10 +211,45 @@ export default function Dashboard() {
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Órdenes Recientes</h2>
-            <div className="text-xs sm:text-sm text-slate-600">
-              Las órdenes recientes aparecerán aquí
-            </div>
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
+              Alertas de Stock
+              {stockBajo.length > 0 && (
+                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                  {stockBajo.length}
+                </span>
+              )}
+            </h2>
+            {stockBajo.length === 0 ? (
+              <div className="text-xs sm:text-sm text-green-600">
+                ✅ Todo el stock está en niveles adecuados
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {stockBajo.map((ing) => (
+                  <div
+                    key={ing.id}
+                    className="p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-xs sm:text-sm text-yellow-900">
+                          ⚠️ {ing.nombre}
+                        </div>
+                        <div className="text-xs text-yellow-700 mt-1">
+                          Stock: {ing.stock_actual} {ing.unidad_medida} / Mínimo: {ing.stock_minimo} {ing.unidad_medida}
+                        </div>
+                      </div>
+                      <a
+                        href="/admin/stock"
+                        className="ml-2 text-xs text-yellow-800 hover:text-yellow-900 underline flex-shrink-0"
+                      >
+                        Ver
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>

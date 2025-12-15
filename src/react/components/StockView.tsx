@@ -98,8 +98,11 @@ export default function StockView() {
                 </span>
               </div>
               <div className="space-y-1 text-xs sm:text-sm mb-3">
-                <p><span className="font-medium">Stock:</span> {ing.stock_actual} / Mín: {ing.stock_minimo}</p>
-                <p><span className="font-medium">Precio:</span> {formatCLP(ing.precio_unitario)}</p>
+                <p><span className="font-medium">Stock:</span> {ing.stock_actual} {ing.unidad_medida} / Mín: {ing.stock_minimo} {ing.unidad_medida}</p>
+                <p><span className="font-medium">Precio por {ing.unidad_medida}:</span> {formatCLP(ing.precio_unitario)}</p>
+                {ing.unidad_medida !== 'un' && (
+                  <p><span className="font-medium">Valor Total Stock:</span> {formatCLP(ing.stock_actual * ing.precio_unitario)}</p>
+                )}
                 {ing.suppliers && (
                   <p><span className="font-medium">Proveedor:</span> {ing.suppliers.name}</p>
                 )}
@@ -140,7 +143,10 @@ export default function StockView() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock Actual</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Stock Mínimo</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Estado</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Precio Unit.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Precio por Unidad</th>
+                {ingredientes.some(ing => ing.unidad_medida !== 'un') && (
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Valor Total Stock</th>
+                )}
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Proveedor</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Acciones</th>
               </tr>
@@ -152,8 +158,8 @@ export default function StockView() {
                   <tr key={ing.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-sm font-medium">{ing.nombre}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{ing.unidad_medida}</td>
-                    <td className="px-4 py-3 text-sm font-semibold">{ing.stock_actual}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{ing.stock_minimo}</td>
+                    <td className="px-4 py-3 text-sm font-semibold">{ing.stock_actual} {ing.unidad_medida}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{ing.stock_minimo} {ing.unidad_medida}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}
@@ -161,7 +167,12 @@ export default function StockView() {
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">{formatCLP(ing.precio_unitario)}</td>
+                    <td className="px-4 py-3 text-sm">{formatCLP(ing.precio_unitario)} / {ing.unidad_medida}</td>
+                    {ingredientes.some(ing2 => ing2.unidad_medida !== 'un') && (
+                      <td className="px-4 py-3 text-sm font-semibold">
+                        {ing.unidad_medida !== 'un' ? formatCLP(ing.stock_actual * ing.precio_unitario) : '-'}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-slate-600">
                       {ing.suppliers?.name || '-'}
                     </td>
@@ -290,23 +301,34 @@ function EditIngredienteModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Precio Unitario</label>
+            <label className="block text-sm font-medium mb-1">Precio por {unidad}</label>
             <input
               type="number"
               step="0.01"
               value={precio}
               onChange={(e) => setPrecio(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              placeholder="Ej: 5000 (si es por kg)"
             />
+            {unidad !== 'un' && parseFloat(precio) > 0 && (
+              <p className="text-xs text-slate-600 mt-1">
+                Precio por {unidad}: {formatCLP(parseFloat(precio) || 0)}
+              </p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Stock Mínimo</label>
+            <label className="block text-sm font-medium mb-1">Stock Mínimo ({unidad})</label>
             <input
               type="number"
+              step="0.01"
               value={stockMinimo}
               onChange={(e) => setStockMinimo(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              placeholder="Umbral para alerta de stock bajo"
             />
+            <p className="text-xs text-slate-600 mt-1">
+              Se mostrará alerta cuando el stock esté por debajo de este valor
+            </p>
           </div>
         </div>
         <div className="flex gap-3 mt-6">
@@ -410,6 +432,11 @@ function AjusteStockModal({
         <p className="text-sm text-slate-600 mb-4">
           Stock actual: <span className="font-semibold">{ingrediente.stock_actual}</span>{' '}
           {ingrediente.unidad_medida}
+          {ingrediente.unidad_medida !== 'un' && (
+            <span className="ml-2">
+              (Valor: {formatCLP(ingrediente.stock_actual * ingrediente.precio_unitario)})
+            </span>
+          )}
         </p>
         <div className="space-y-4">
           <div>
@@ -426,16 +453,21 @@ function AjusteStockModal({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">
-              {tipo === 'ajuste' ? 'Nuevo Stock' : 'Cantidad'}
+              {tipo === 'ajuste' ? 'Nuevo Stock' : 'Cantidad'} ({ingrediente.unidad_medida})
             </label>
             <input
               type="number"
               step="0.01"
               value={cantidad}
               onChange={(e) => setCantidad(e.target.value)}
-              placeholder={tipo === 'ajuste' ? 'Nuevo valor de stock' : 'Cantidad'}
+              placeholder={tipo === 'ajuste' ? `Nuevo valor de stock en ${ingrediente.unidad_medida}` : `Cantidad en ${ingrediente.unidad_medida}`}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg"
             />
+            {cantidad && parseFloat(cantidad) > 0 && ingrediente.unidad_medida !== 'un' && (
+              <p className="text-xs text-slate-600 mt-1">
+                Valor: {formatCLP(parseFloat(cantidad) * ingrediente.precio_unitario)}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Motivo (opcional)</label>
