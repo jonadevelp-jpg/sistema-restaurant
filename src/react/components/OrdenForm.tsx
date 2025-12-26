@@ -65,6 +65,23 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     }
   }, [ordenId]);
 
+  // Reiniciar estado a "pending" cuando se eliminan todos los items
+  useEffect(() => {
+    if (items.length === 0 && orden && orden.estado !== 'pending' && orden.estado !== 'paid') {
+      console.log('[OrdenForm] Detectado: orden sin items pero con estado avanzado - reiniciando a "pending"');
+      supabase
+        .from('ordenes_restaurante')
+        .update({ estado: 'pending' })
+        .eq('id', ordenId)
+        .then(() => {
+          loadData();
+        })
+        .catch((error) => {
+          console.error('[OrdenForm] Error reiniciando estado:', error);
+        });
+    }
+  }, [items.length, orden?.estado, ordenId]);
+
   async function loadData() {
     if (!ordenId) {
       setLoading(false);
@@ -347,9 +364,64 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         .eq('id', itemId);
 
       if (error) throw error;
+      
+      // Si después de eliminar no quedan items, reiniciar estado a "pending"
+      const itemsRestantes = items.filter(item => item.id !== itemId);
+      if (itemsRestantes.length === 0 && orden && orden.estado !== 'pending') {
+        // Reiniciar estado a "pending" si la orden tenía items y ahora no tiene
+        console.log('[OrdenForm] Todos los items eliminados - reiniciando estado a "pending"');
+        await supabase
+          .from('ordenes_restaurante')
+          .update({ estado: 'pending' })
+          .eq('id', ordenId);
+      }
+      
       await loadData();
     } catch (error: any) {
       alert('Error eliminando item: ' + error.message);
+    }
+  }
+
+  async function cancelarOrden() {
+    if (!confirm('¿Estás seguro de cancelar y eliminar esta orden? Esta acción no se puede deshacer y liberará la mesa.')) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      // Eliminar todos los items de la orden
+      if (items.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('orden_items')
+          .delete()
+          .eq('orden_id', ordenId);
+
+        if (itemsError) throw itemsError;
+      }
+
+      // Liberar la mesa si tiene una asignada
+      if (orden?.mesa_id) {
+        await supabase
+          .from('mesas')
+          .update({ estado: 'libre' })
+          .eq('id', orden.mesa_id);
+      }
+
+      // Eliminar la orden
+      const { error } = await supabase
+        .from('ordenes_restaurante')
+        .delete()
+        .eq('id', ordenId);
+
+      if (error) throw error;
+
+      // Redirigir a mesas
+      window.location.href = '/admin/mesas';
+    } catch (error: any) {
+      alert('Error cancelando orden: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -369,6 +441,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         const token = session?.access_token;
         
         if (token) {
+          console.log('[OrdenForm] Llamando a API route para cambiar estado:', nuevoEstado);
           const response = await fetch(`/api/ordenes/${ordenId}`, {
             method: 'PATCH',
             headers: {
@@ -379,17 +452,26 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           });
           
           if (response.ok) {
+            const result = await response.json();
+            console.log('[OrdenForm] API route respondió correctamente:', result);
             // API route funcionó, recargar datos
             await loadData();
             return;
+          } else {
+            const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+            console.error('[OrdenForm] API route falló:', response.status, errorData);
+            // Continuar con fallback
           }
+        } else {
+          console.warn('[OrdenForm] No hay token de sesión, usando método directo');
         }
-      } catch (apiError) {
+      } catch (apiError: any) {
         // Si la API falla, usar método directo como fallback
-        console.warn('API route no disponible, usando método directo:', apiError);
+        console.warn('[OrdenForm] API route no disponible, usando método directo:', apiError.message);
       }
       
       // Fallback: actualizar directamente (método original)
+      console.log('[OrdenForm] Usando método directo (fallback)');
       const { error } = await supabase
         .from('ordenes_restaurante')
         .update({ estado: nuevoEstado })
@@ -398,6 +480,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       if (error) throw error;
       await loadData();
     } catch (error: any) {
+      console.error('[OrdenForm] Error actualizando estado:', error);
       alert('Error actualizando estado: ' + error.message);
     } finally {
       setSaving(false);
@@ -528,36 +611,6 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     }
   }
 
-  async function cancelarOrden() {
-    if (!confirm('¿Estás seguro de cancelar esta orden? Esto liberará la mesa.')) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const { error } = await supabase
-        .from('ordenes_restaurante')
-        .update({ estado: 'cancelled' })
-        .eq('id', ordenId);
-
-      if (error) throw error;
-
-      // Liberar mesa
-      if (orden?.mesa_id) {
-        await supabase
-          .from('mesas')
-          .update({ estado: 'libre' })
-          .eq('id', orden.mesa_id);
-      }
-
-      // Redirigir a mesas
-      window.location.href = '/admin/mesas';
-    } catch (error: any) {
-      alert('Error cancelando orden: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const filteredMenuItems = (() => {
     let filtered = selectedCategory === 'all'
@@ -733,14 +786,14 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
               >
                 💰 Pagar
               </button>
-              {(items.length === 0 && orden.estado === 'pending') && (
+              {(orden.estado === 'pending' || orden.estado === 'preparing') && (
                 <button
                   onClick={cancelarOrden}
                   disabled={saving}
-                  aria-label="Cancelar orden y liberar mesa"
+                  aria-label="Cancelar y eliminar orden"
                   className="min-h-[48px] min-w-[140px] px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 active:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-red-300 transition-all whitespace-nowrap"
                 >
-                  ❌ Cancelar
+                  ❌ Cancelar Orden
                 </button>
               )}
             </div>

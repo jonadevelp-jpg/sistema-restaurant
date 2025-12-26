@@ -84,14 +84,23 @@ export const PATCH: APIRoute = async (context) => {
       
       // Imprimir según el nuevo estado
       if (estadoNuevo === 'preparing' && items.length > 0) {
+        console.log('[API] Estado cambió a "preparing" - activando impresión de comanda');
         // Imprimir comanda de cocina (sin bloquear si falla)
         printKitchenCommand(ordenActualizada, items).catch((error) => {
-          console.error('[API] Error imprimiendo comanda (no bloquea):', error);
+          console.error('[API] ❌ Error imprimiendo comanda (no bloquea):', error);
         });
       } else if (estadoNuevo === 'paid' && items.length > 0) {
+        console.log('[API] Estado cambió a "paid" - activando impresión de boleta');
         // Imprimir boleta de cliente (sin bloquear si falla)
         printCustomerReceipt(ordenActualizada, items).catch((error) => {
-          console.error('[API] Error imprimiendo boleta (no bloquea):', error);
+          console.error('[API] ❌ Error imprimiendo boleta (no bloquea):', error);
+        });
+      } else {
+        console.log('[API] Estado cambió pero no se imprime:', {
+          estadoNuevo,
+          itemsLength: items.length,
+          debeImprimirComanda: estadoNuevo === 'preparing' && items.length > 0,
+          debeImprimirBoleta: estadoNuevo === 'paid' && items.length > 0,
         });
       }
     }

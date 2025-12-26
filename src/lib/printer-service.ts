@@ -184,14 +184,24 @@ async function sendToLocalPrintService(type: 'kitchen' | 'receipt', orden: Orden
   const printServiceUrl = import.meta.env.PRINT_SERVICE_URL || 'http://localhost:3001';
   const printServiceToken = import.meta.env.PRINT_SERVICE_TOKEN || '';
   
+  console.log('[Printer] sendToLocalPrintService - URL:', printServiceUrl);
+  console.log('[Printer] sendToLocalPrintService - Token:', printServiceToken ? '***presente***' : 'FALTANTE');
+  
   if (!printServiceUrl || !printServiceToken) {
-    console.warn('[Printer] Servicio de impresión local no configurado (PRINT_SERVICE_URL y PRINT_SERVICE_TOKEN)');
+    console.error('[Printer] ❌ Servicio de impresión local NO configurado');
+    console.error('[Printer] PRINT_SERVICE_URL:', printServiceUrl || 'FALTANTE');
+    console.error('[Printer] PRINT_SERVICE_TOKEN:', printServiceToken ? 'presente' : 'FALTANTE');
     return false;
   }
   
   try {
     // El servicio local escucha en la raíz, no en /print
     const url = printServiceUrl.endsWith('/') ? printServiceUrl.slice(0, -1) : printServiceUrl;
+    console.log('[Printer] Enviando petición a:', url);
+    console.log('[Printer] Tipo:', type);
+    console.log('[Printer] Orden:', orden.numero_orden);
+    console.log('[Printer] Items:', items.length);
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -205,24 +215,34 @@ async function sendToLocalPrintService(type: 'kitchen' | 'receipt', orden: Orden
       }),
     });
     
+    console.log('[Printer] Respuesta del servicio local:', response.status, response.statusText);
+    
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+      console.error('[Printer] ❌ Error del servicio local:', error);
       throw new Error(error.error || `HTTP ${response.status}`);
     }
     
     const result = await response.json();
-    console.log(`[Printer] ${type === 'kitchen' ? 'Comanda' : 'Boleta'} enviada a servicio local:`, result.message);
+    console.log(`[Printer] ✅ ${type === 'kitchen' ? 'Comanda' : 'Boleta'} enviada a servicio local:`, result.message);
     return result.success === true;
   } catch (error: any) {
-    console.error(`[Printer] Error enviando a servicio local:`, error.message);
+    console.error(`[Printer] ❌ Error enviando a servicio local:`, error.message);
+    console.error('[Printer] Stack:', error.stack);
     return false;
   }
 }
 
 // Imprimir comanda de cocina
 export async function printKitchenCommand(orden: Orden, items: OrdenItem[]): Promise<boolean> {
+  console.log('[Printer] printKitchenCommand llamado para orden:', orden.numero_orden);
+  console.log('[Printer] isLocalServer():', isLocalServer());
+  console.log('[Printer] PRINT_SERVICE_URL:', import.meta.env.PRINT_SERVICE_URL);
+  console.log('[Printer] PRINT_SERVICE_TOKEN:', import.meta.env.PRINT_SERVICE_TOKEN ? '***configurado***' : 'NO configurado');
+  
   // Si estamos en servidor local, imprimir directamente
   if (isLocalServer()) {
+    console.log('[Printer] Servidor local - imprimiendo directamente');
     const config = getPrinterConfig('kitchen');
     
     if (!config) {
@@ -318,8 +338,14 @@ export async function printKitchenCommand(orden: Orden, items: OrdenItem[]): Pro
 
 // Imprimir boleta de cliente
 export async function printCustomerReceipt(orden: Orden, items: OrdenItem[]): Promise<boolean> {
+  console.log('[Printer] printCustomerReceipt llamado para orden:', orden.numero_orden);
+  console.log('[Printer] isLocalServer():', isLocalServer());
+  console.log('[Printer] PRINT_SERVICE_URL:', import.meta.env.PRINT_SERVICE_URL);
+  console.log('[Printer] PRINT_SERVICE_TOKEN:', import.meta.env.PRINT_SERVICE_TOKEN ? '***configurado***' : 'NO configurado');
+  
   // Si estamos en servidor local, imprimir directamente
   if (isLocalServer()) {
+    console.log('[Printer] Servidor local - imprimiendo directamente');
     const config = getPrinterConfig('cashier');
     
     if (!config) {
