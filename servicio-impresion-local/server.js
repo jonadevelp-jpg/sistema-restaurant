@@ -10,37 +10,53 @@
 // Cargar variables de entorno desde .env
 // IMPORTANTE: dotenv debe estar instalado (npm install dotenv)
 let dotenvLoaded = false;
+const fs = require('fs');
+const path = require('path');
+
+// Primero intentar con dotenv
 try {
-  require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
   dotenvLoaded = true;
   console.log('✅ Archivo .env cargado con dotenv');
 } catch (error) {
-  console.warn('⚠️  dotenv no disponible o error cargando .env:', error.message);
-  console.warn('⚠️  Intentando cargar .env manualmente...');
-  
-  // Fallback: intentar cargar .env manualmente
+  console.warn('⚠️  dotenv no disponible o error:', error.message);
+}
+
+// Fallback: cargar .env manualmente (más robusto)
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    const envPath = path.join(__dirname, '.env');
-    if (fs.existsSync(envPath)) {
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      envContent.split('\n').forEach(line => {
-        const trimmedLine = line.trim();
-        if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.includes('=')) {
-          const [key, ...valueParts] = trimmedLine.split('=');
-          const value = valueParts.join('=').trim();
-          if (key && value) {
-            process.env[key.trim()] = value;
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    let loadedCount = 0;
+    envContent.split(/\r?\n/).forEach(line => {
+      const trimmedLine = line.trim();
+      if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.includes('=')) {
+        const equalIndex = trimmedLine.indexOf('=');
+        if (equalIndex > 0) {
+          const key = trimmedLine.substring(0, equalIndex).trim();
+          const value = trimmedLine.substring(equalIndex + 1).trim();
+          // Remover comillas si las tiene
+          const cleanValue = value.replace(/^["']|["']$/g, '');
+          if (key && cleanValue) {
+            process.env[key] = cleanValue;
+            loadedCount++;
+            // Log solo para PRINT_SERVICE_TOKEN para debug
+            if (key === 'PRINT_SERVICE_TOKEN') {
+              console.log(`🔐 Cargado desde .env: ${key}=${cleanValue.substring(0, 20)}...`);
+            }
           }
         }
-      });
-      console.log('✅ Archivo .env cargado manualmente');
+      }
+    });
+    if (loadedCount > 0) {
+      console.log(`✅ Archivo .env cargado manualmente (${loadedCount} variables)`);
       dotenvLoaded = true;
     }
   } catch (manualError) {
     console.error('❌ Error cargando .env manualmente:', manualError.message);
   }
+} else {
+  console.error(`❌ Archivo .env no encontrado en: ${envPath}`);
 }
 
 if (!dotenvLoaded) {
