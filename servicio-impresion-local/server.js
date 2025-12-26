@@ -323,32 +323,60 @@ const server = http.createServer(async (req, res) => {
   
   // Verificar token (opcional pero recomendado)
   const authHeader = req.headers.authorization;
-  console.log('🔐 Verificando autenticación...');
-  console.log('🔐 Header recibido:', authHeader ? authHeader.substring(0, 30) + '...' : 'NO HAY HEADER');
-  console.log('🔐 Token esperado (primeros 20 chars):', API_TOKEN.substring(0, 20));
+  console.log('🔐 ========== VERIFICACIÓN DE TOKEN ==========');
+  console.log('🔐 Header Authorization completo:', authHeader || 'NO HAY HEADER');
+  console.log('🔐 Token esperado (completo):', API_TOKEN);
+  console.log('🔐 Token esperado (longitud):', API_TOKEN.length);
+  console.log('🔐 Token esperado (primeros 30):', API_TOKEN.substring(0, 30));
+  console.log('🔐 Token esperado (últimos 10):', API_TOKEN.substring(Math.max(0, API_TOKEN.length - 10)));
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     console.error('❌ Token no proporcionado en header');
+    console.error('❌ Header recibido:', authHeader || 'VACÍO');
     res.writeHead(401, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Token requerido' }));
     return;
   }
   
   const token = authHeader.replace('Bearer ', '').trim();
-  console.log('🔐 Token recibido (primeros 20 chars):', token.substring(0, 20));
-  console.log('🔐 Tokens coinciden?', token === API_TOKEN);
+  console.log('🔐 Token recibido (completo):', token);
+  console.log('🔐 Token recibido (longitud):', token.length);
+  console.log('🔐 Token recibido (primeros 30):', token.substring(0, 30));
+  console.log('🔐 Token recibido (últimos 10):', token.substring(Math.max(0, token.length - 10)));
   
-  if (token !== API_TOKEN) {
-    console.error('❌ Token inválido');
-    console.error('❌ Token recibido (completo):', token);
-    console.error('❌ Token esperado (completo):', API_TOKEN);
-    console.error('❌ Longitud recibido:', token.length);
-    console.error('❌ Longitud esperado:', API_TOKEN.length);
+  // Comparación carácter por carácter para debug
+  const coinciden = token === API_TOKEN;
+  console.log('🔐 Tokens son iguales?', coinciden);
+  
+  if (!coinciden) {
+    // Encontrar la primera diferencia
+    const minLen = Math.min(token.length, API_TOKEN.length);
+    for (let i = 0; i < minLen; i++) {
+      if (token[i] !== API_TOKEN[i]) {
+        console.error(`❌ Diferencia en posición ${i}:`);
+        console.error(`   Recibido: "${token[i]}" (código: ${token.charCodeAt(i)})`);
+        console.error(`   Esperado: "${API_TOKEN[i]}" (código: ${API_TOKEN.charCodeAt(i)})`);
+        break;
+      }
+    }
+    if (token.length !== API_TOKEN.length) {
+      console.error(`❌ Diferencia de longitud: recibido ${token.length}, esperado ${API_TOKEN.length}`);
+    }
+    
+    console.error('❌ Token inválido - Comparación fallida');
     res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Token inválido' }));
+    res.end(JSON.stringify({ 
+      error: 'Token inválido',
+      debug: {
+        recibido_length: token.length,
+        esperado_length: API_TOKEN.length,
+        primeros_recibido: token.substring(0, 10),
+        primeros_esperado: API_TOKEN.substring(0, 10)
+      }
+    }));
     return;
   }
-  console.log('✅ Token válido');
+  console.log('✅ Token válido - Autenticación exitosa');
   
   let body = '';
   req.on('data', chunk => {
