@@ -742,12 +742,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           <div className="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 -mx-2 sm:mx-0 px-2 sm:px-0">
             <div className="flex gap-2 sm:gap-3 min-w-max sm:min-w-0 sm:flex-wrap">
               <button
-                onClick={() => {
-                  updateEstado('preparing');
-                  if (items.length > 0) {
-                    setShowComanda(true);
-                  }
-                }}
+                onClick={() => updateEstado('preparing')}
                 disabled={orden.estado !== 'pending' || saving || items.length === 0}
                 aria-label="Marcar orden en preparación"
                 className="min-h-[48px] min-w-[120px] px-4 py-3 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 active:bg-yellow-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-300 transition-all whitespace-nowrap"
