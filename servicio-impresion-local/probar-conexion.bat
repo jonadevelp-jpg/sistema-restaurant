@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 echo ============================================
 echo  PROBAR CONEXION DEL SERVICIO
 echo ============================================
@@ -9,20 +10,45 @@ powershell -Command "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process 
 echo.
 
 echo [2] Obteniendo IP local...
+set "ip="
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
-    set ip=%%a
-    set ip=!ip:~1!
+    if not defined ip (
+        set "temp=%%a"
+        set "temp=!temp:~1!"
+        set "temp=!temp: =!"
+        if "!temp!" neq "" (
+            set "ip=!temp!"
+        )
+    )
+)
+
+if not defined ip (
+    echo Intentando metodo alternativo...
+    for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4"') do (
+        if not defined ip (
+            set "temp=%%a"
+            set "temp=!temp: =!"
+            if "!temp!" neq "" (
+                set "ip=!temp!"
+            )
+        )
+    )
+)
+
+if defined ip (
     echo Tu IP es: !ip!
     echo.
     echo [3] Probando conexion local...
     powershell -Command "try { $response = Invoke-WebRequest -Uri 'http://!ip!:3001' -Method GET -TimeoutSec 5; Write-Host 'OK: Servicio respondiendo' } catch { Write-Host 'ERROR: Servicio no responde -' $_.Exception.Message }"
+) else (
+    echo ERROR: No se pudo obtener la IP automaticamente
     echo.
-    echo [4] Verificando puerto 3001...
-    netstat -an | findstr ":3001"
-    echo.
-    goto :found_ip
+    echo Ejecuta: obtener-ip.bat para obtener la IP manualmente
 )
-:found_ip
+echo.
+echo [4] Verificando puerto 3001...
+netstat -an | findstr ":3001"
+echo.
 
 echo.
 echo ============================================
