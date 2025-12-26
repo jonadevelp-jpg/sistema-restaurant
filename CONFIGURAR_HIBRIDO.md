@@ -103,7 +103,7 @@ New-NetFirewallRule -DisplayName "Servicio Impresión" -Direction Inbound -Local
 7. Argumentos: `C:\servicio-impresion-local\server.js`
 8. Directorio: `C:\servicio-impresion-local`
 
-**Opción B: PM2 (Recomendado) - O usa el script automático**
+ **Opción B: PM2 (Recomendado) - O usa el script automático**
 
 **Método Automático (Más Fácil):**
 1. Doble clic en `instalar-automatico.bat`

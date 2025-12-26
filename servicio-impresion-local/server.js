@@ -7,6 +7,14 @@
  * Si este servicio se apaga, la página web sigue funcionando (solo no imprime).
  */
 
+// Cargar variables de entorno desde .env
+try {
+  require('dotenv').config();
+  console.log('✅ Archivo .env cargado');
+} catch (error) {
+  console.warn('⚠️  dotenv no disponible, usando variables de entorno del sistema');
+}
+
 const http = require('http');
 const { Network, USB, Printer } = require('escpos');
 
@@ -27,7 +35,9 @@ const API_TOKEN = process.env.PRINT_SERVICE_TOKEN || 'cambiar-este-token';
 
 console.log('🖨️  Servicio de Impresión Local iniciado');
 console.log(`📡 Escuchando en puerto ${PORT}`);
-console.log(`🔐 Token: ${API_TOKEN.substring(0, 10)}...`);
+console.log(`🔐 Token configurado: ${API_TOKEN ? 'SÍ' : 'NO'}`);
+console.log(`🔐 Token (primeros 20 chars): ${API_TOKEN ? API_TOKEN.substring(0, 20) + '...' : 'NO CONFIGURADO'}`);
+console.log(`🔐 Token (longitud): ${API_TOKEN ? API_TOKEN.length : 0} caracteres`);
 
 // Conectar a impresora
 function connectPrinter(type, path, ip, port) {

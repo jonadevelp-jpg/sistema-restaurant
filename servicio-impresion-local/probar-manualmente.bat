@@ -53,13 +53,17 @@ if not defined token (
     exit /b 1
 )
 
-echo Token encontrado: !token:~0,10!...
+echo Token encontrado: !token:~0,20!...
+echo.
+
+echo IMPORTANTE: Verifica que este token sea EXACTAMENTE igual
+echo al configurado en Vercel (sin espacios, sin saltos de linea)
 echo.
 
 echo Enviando peticion de prueba...
 echo.
 
-powershell -Command "$body = @{type='kitchen';orden=@{numero_orden='TEST-001';created_at=(Get-Date).ToString('o');mesas=@{numero=1}};items=@(@{cantidad=1;menu_item=@{name='Item de Prueba'};notas='';subtotal=1000})} | ConvertTo-Json -Depth 10; $response = Invoke-WebRequest -Uri 'http://!ip!:3001' -Method POST -Headers @{'Authorization'='Bearer !token!';'Content-Type'='application/json'} -Body $body; Write-Host 'Respuesta:'; $response.Content"
+powershell -Command "try { $body = @{type='kitchen';orden=@{numero_orden='TEST-001';created_at=(Get-Date).ToString('o');mesas=@{numero=1}};items=@(@{cantidad=1;menu_item=@{name='Item de Prueba'};notas='';subtotal=1000})} | ConvertTo-Json -Depth 10; $headers = @{'Authorization'='Bearer !token!';'Content-Type'='application/json'}; Write-Host 'Enviando a: http://!ip!:3001'; Write-Host 'Token (primeros 20): ' + '!token:~0,20!'; $response = Invoke-WebRequest -Uri 'http://!ip!:3001' -Method POST -Headers $headers -Body $body; Write-Host 'Respuesta:'; $response.Content } catch { Write-Host 'ERROR:' $_.Exception.Message; if ($_.Exception.Response) { $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream()); $responseBody = $reader.ReadToEnd(); Write-Host 'Detalles:' $responseBody } }"
 
 echo.
 echo.
