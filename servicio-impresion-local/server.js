@@ -32,20 +32,28 @@ console.log(`🔐 Token: ${API_TOKEN.substring(0, 10)}...`);
 // Conectar a impresora
 function connectPrinter(type, path, ip, port) {
   try {
+    console.log(`🔌 Conectando a impresora: tipo=${type}, path=${path}, ip=${ip}, port=${port}`);
     let device;
     
     if (type === 'network') {
       if (!ip || !port) {
         throw new Error('IP y puerto requeridos para impresora de red');
       }
+      console.log(`🔌 Creando dispositivo de red: ${ip}:${port}`);
       device = new Network(ip, port);
     } else {
+      console.log(`🔌 Creando dispositivo USB: ${path}`);
       device = new USB(path);
     }
     
-    return new Printer(device);
+    console.log(`🔌 Creando impresora...`);
+    const printer = new Printer(device);
+    console.log(`✅ Impresora conectada correctamente`);
+    return printer;
   } catch (error) {
-    console.error(`Error conectando a impresora:`, error.message);
+    console.error(`❌ Error conectando a impresora:`, error.message);
+    console.error(`❌ Tipo: ${type}, Path: ${path}, IP: ${ip}, Port: ${port}`);
+    console.error(`❌ Stack:`, error.stack);
     return null;
   }
 }
@@ -155,7 +163,9 @@ async function printKitchenCommand(data) {
     console.log(`✅ Comanda impresa: Orden ${orden.numero_orden}`);
     return { success: true, message: 'Comanda impresa correctamente' };
   } catch (error) {
-    console.error('Error imprimiendo comanda:', error);
+    console.error('❌ Error imprimiendo comanda:', error);
+    console.error('❌ Detalles:', error.message);
+    console.error('❌ Stack:', error.stack);
     try {
       await printer.close();
     } catch {}
@@ -271,7 +281,9 @@ async function printCustomerReceipt(data) {
     console.log(`✅ Boleta impresa: Orden ${orden.numero_orden}`);
     return { success: true, message: 'Boleta impresa correctamente' };
   } catch (error) {
-    console.error('Error imprimiendo boleta:', error);
+    console.error('❌ Error imprimiendo boleta:', error);
+    console.error('❌ Detalles:', error.message);
+    console.error('❌ Stack:', error.stack);
     try {
       await printer.close();
     } catch {}
@@ -301,11 +313,27 @@ const server = http.createServer(async (req, res) => {
   
   // Verificar token (opcional pero recomendado)
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${API_TOKEN}`) {
+  console.log('🔐 Verificando autenticación...');
+  console.log('🔐 Header recibido:', authHeader ? authHeader.substring(0, 20) + '...' : 'NO HAY HEADER');
+  console.log('🔐 Token esperado:', `Bearer ${API_TOKEN.substring(0, 10)}...`);
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.error('❌ Token no proporcionado en header');
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Token requerido' }));
+    return;
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  if (token !== API_TOKEN) {
+    console.error('❌ Token inválido');
+    console.error('❌ Token recibido:', token.substring(0, 10) + '...');
+    console.error('❌ Token esperado:', API_TOKEN.substring(0, 10) + '...');
     res.writeHead(401, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Token inválido' }));
     return;
   }
+  console.log('✅ Token válido');
   
   let body = '';
   req.on('data', chunk => {
@@ -314,7 +342,12 @@ const server = http.createServer(async (req, res) => {
   
   req.on('end', async () => {
     try {
+      console.log('📥 Petición recibida, parseando body...');
       const data = JSON.parse(body);
+      console.log('📥 Tipo:', data.type);
+      console.log('📥 Orden:', data.orden?.numero_orden);
+      console.log('📥 Items:', data.items?.length || 0);
+      
       const { type, orden, items } = data;
       
       if (!type || !orden || !items) {
@@ -324,8 +357,10 @@ const server = http.createServer(async (req, res) => {
       let result;
       
       if (type === 'kitchen') {
+        console.log('📋 Imprimiendo comanda de cocina...');
         result = await printKitchenCommand({ orden, items });
       } else if (type === 'receipt') {
+        console.log('🧾 Imprimiendo boleta de cliente...');
         result = await printCustomerReceipt({ orden, items });
       } else {
         throw new Error('Tipo de impresión inválido. Use "kitchen" o "receipt"');
@@ -334,7 +369,9 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(result));
     } catch (error) {
-      console.error('Error procesando solicitud:', error);
+      console.error('❌ Error procesando solicitud:', error);
+      console.error('❌ Detalles:', error.message);
+      console.error('❌ Stack:', error.stack);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ 
         error: error.message || 'Error interno del servidor',
