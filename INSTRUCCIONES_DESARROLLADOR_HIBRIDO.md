@@ -164,3 +164,5 @@ PRINTER_KITCHEN_PATH=USB002
 
 **¡Con esto, el dueño solo configura una vez y tú solo actualizas Vercel cuando cambia algo!** 🎉
 
+
+

@@ -156,3 +156,5 @@ pm2 logs impresion-restaurante
 
 **Ejecuta estos pasos y comparte conmigo qué mensajes ves en cada lugar.** 📋
 
+
+

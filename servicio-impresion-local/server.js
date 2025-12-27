@@ -103,27 +103,71 @@ if (API_TOKEN === 'cambiar-este-token') {
 // Conectar a impresora
 function connectPrinter(type, path, ip, port) {
   try {
-    console.log(`🔌 Conectando a impresora: tipo=${type}, path=${path}, ip=${ip}, port=${port}`);
+    console.log(`🔌 ========== INTENTANDO CONECTAR A IMPRESORA ==========`);
+    console.log(`🔌 Tipo: ${type}`);
+    console.log(`🔌 Path: ${path || 'NO CONFIGURADO'}`);
+    console.log(`🔌 IP: ${ip || 'NO CONFIGURADO'}`);
+    console.log(`🔌 Port: ${port || 'NO CONFIGURADO'}`);
+    
     let device;
     
+    // Validar configuración
     if (type === 'network') {
       if (!ip || !port) {
+        console.error(`❌ Configuración incompleta para impresora de red:`);
+        console.error(`   - IP requerida: ${ip ? '✅' : '❌ FALTA'}`);
+        console.error(`   - Port requerido: ${port ? '✅' : '❌ FALTA'}`);
         throw new Error('IP y puerto requeridos para impresora de red');
       }
       console.log(`🔌 Creando dispositivo de red: ${ip}:${port}`);
       device = new Network(ip, port);
-    } else {
+    } else if (type === 'usb') {
+      if (!path) {
+        console.error(`❌ Configuración incompleta para impresora USB:`);
+        console.error(`   - Path requerido: ${path ? '✅' : '❌ FALTA'}`);
+        throw new Error('Path requerido para impresora USB');
+      }
       console.log(`🔌 Creando dispositivo USB: ${path}`);
-      device = new USB(path);
+      console.log(`🔌 NOTA: En Windows, el path puede ser USB002, COM3, o el nombre de la impresora`);
+      
+      // Crear dispositivo USB - esto puede fallar si el dispositivo no existe
+      try {
+        console.log(`🔌 Instanciando new USB("${path}")...`);
+        device = new USB(path);
+        console.log(`✅ Dispositivo USB creado exitosamente`);
+      } catch (usbError) {
+        console.error(`❌ ERROR al crear dispositivo USB:`);
+        console.error(`   - Mensaje: ${usbError.message}`);
+        console.error(`   - Tipo: ${usbError.name}`);
+        console.error(`   - Path intentado: "${path}"`);
+        console.error(`   - Stack: ${usbError.stack}`);
+        throw new Error(`No se pudo crear dispositivo USB con path "${path}": ${usbError.message}`);
+      }
+    } else {
+      throw new Error(`Tipo de impresora no válido: ${type}. Use 'network' o 'usb'`);
     }
     
-    console.log(`🔌 Creando impresora...`);
-    const printer = new Printer(device);
-    console.log(`✅ Impresora conectada correctamente`);
-    return printer;
+    // Crear objeto Printer - esto también puede fallar
+    try {
+      console.log(`🔌 Creando objeto Printer con el dispositivo...`);
+      const printer = new Printer(device);
+      console.log(`✅ Objeto Printer creado correctamente`);
+      console.log(`🔌 NOTA: La conexión física real se verificará al intentar imprimir`);
+      return printer;
+    } catch (printerError) {
+      console.error(`❌ ERROR al crear objeto Printer:`);
+      console.error(`   - Mensaje: ${printerError.message}`);
+      console.error(`   - Tipo: ${printerError.name}`);
+      console.error(`   - Stack: ${printerError.stack}`);
+      throw new Error(`No se pudo crear objeto Printer: ${printerError.message}`);
+    }
   } catch (error) {
-    console.error(`❌ Error conectando a impresora:`, error.message);
-    console.error(`❌ Tipo: ${type}, Path: ${path}, IP: ${ip}, Port: ${port}`);
+    console.error(`❌ ========== ERROR CONECTANDO A IMPRESORA ==========`);
+    console.error(`❌ Mensaje: ${error.message}`);
+    console.error(`❌ Tipo: ${type}`);
+    console.error(`❌ Path: ${path || 'NO CONFIGURADO'}`);
+    console.error(`❌ IP: ${ip || 'NO CONFIGURADO'}`);
+    console.error(`❌ Port: ${port || 'NO CONFIGURADO'}`);
     console.error(`❌ Stack:`, error.stack);
     return null;
   }
@@ -163,6 +207,15 @@ function formatPersonalization(notas) {
 async function printKitchenCommand(data) {
   const { orden, items } = data;
   
+  console.log(`📋 ========== INICIANDO IMPRESIÓN DE COMANDA ==========`);
+  console.log(`📋 Orden: ${orden.numero_orden}`);
+  console.log(`📋 Items: ${items.length}`);
+  console.log(`📋 Configuración de impresora:`);
+  console.log(`   - Tipo: ${KITCHEN_PRINTER_TYPE}`);
+  console.log(`   - Path: ${KITCHEN_PRINTER_PATH || 'NO CONFIGURADO'}`);
+  console.log(`   - IP: ${KITCHEN_PRINTER_IP || 'NO CONFIGURADO'}`);
+  console.log(`   - Port: ${KITCHEN_PRINTER_PORT || 'NO CONFIGURADO'}`);
+  
   const printer = connectPrinter(
     KITCHEN_PRINTER_TYPE,
     KITCHEN_PRINTER_PATH,
@@ -171,10 +224,23 @@ async function printKitchenCommand(data) {
   );
   
   if (!printer) {
-    throw new Error('No se pudo conectar a la impresora de cocina');
+    const errorMsg = 'No se pudo conectar a la impresora de cocina';
+    console.error(`❌ ${errorMsg}`);
+    console.error(`❌ Verifica que:`);
+    console.error(`   1. La impresora esté conectada y encendida`);
+    console.error(`   2. El archivo .env tenga la configuración correcta:`);
+    console.error(`      PRINTER_KITCHEN_TYPE=${KITCHEN_PRINTER_TYPE}`);
+    if (KITCHEN_PRINTER_TYPE === 'network') {
+      console.error(`      PRINTER_KITCHEN_IP=${KITCHEN_PRINTER_IP || 'FALTA'}`);
+      console.error(`      PRINTER_KITCHEN_PORT=${KITCHEN_PRINTER_PORT || 'FALTA'}`);
+    } else {
+      console.error(`      PRINTER_KITCHEN_PATH=${KITCHEN_PRINTER_PATH || 'FALTA'}`);
+    }
+    throw new Error(errorMsg);
   }
   
   try {
+    console.log(`📋 Preparando contenido de impresión...`);
     // Encabezado
     printer
       .font('a')
@@ -189,6 +255,8 @@ async function printKitchenCommand(data) {
       .text(`Hora: ${new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
       .text('----------------')
       .feed(1);
+    
+    console.log(`📋 Encabezado preparado, agregando items...`);
     
     // Items
     const itemsPorCategoria = items.reduce((acc, item) => {
@@ -230,16 +298,40 @@ async function printKitchenCommand(data) {
       .feed(2)
       .cut();
     
+    console.log(`📋 Contenido preparado, enviando a impresora...`);
     await printer.close();
-    console.log(`✅ Comanda impresa: Orden ${orden.numero_orden}`);
+    console.log(`✅ Comanda impresa correctamente: Orden ${orden.numero_orden}`);
     return { success: true, message: 'Comanda impresa correctamente' };
   } catch (error) {
-    console.error('❌ Error imprimiendo comanda:', error);
-    console.error('❌ Detalles:', error.message);
+    console.error('❌ ========== ERROR DURANTE LA IMPRESIÓN ==========');
+    console.error('❌ Mensaje:', error.message);
+    console.error('❌ Tipo:', error.name);
     console.error('❌ Stack:', error.stack);
+    
+    // Intentar cerrar la impresora si está abierta
     try {
-      await printer.close();
-    } catch {}
+      if (printer) {
+        await printer.close();
+        console.log('📋 Impresora cerrada después del error');
+      }
+    } catch (closeError) {
+      console.error('❌ Error al cerrar impresora:', closeError.message);
+    }
+    
+    // Proporcionar información útil según el tipo de error
+    if (error.message && error.message.includes('ECONNREFUSED')) {
+      console.error('❌ ERROR: No se pudo conectar a la impresora de red');
+      console.error('   Verifica que la IP y puerto sean correctos');
+      console.error('   Verifica que la impresora esté encendida y en la red');
+    } else if (error.message && error.message.includes('ENOENT')) {
+      console.error('❌ ERROR: No se encontró el dispositivo USB');
+      console.error('   Verifica que el path sea correcto (ej: USB002, COM3)');
+      console.error('   Verifica que la impresora esté conectada');
+    } else if (error.message && error.message.includes('EACCES')) {
+      console.error('❌ ERROR: Permisos insuficientes para acceder a la impresora');
+      console.error('   En Windows, ejecuta el servicio como Administrador');
+    }
+    
     throw error;
   }
 }
@@ -487,8 +579,24 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`✅ Servicio de impresión escuchando en http://localhost:${PORT}`);
-  console.log(`📋 Impresora Cocina: ${KITCHEN_PRINTER_TYPE} - ${KITCHEN_PRINTER_PATH || KITCHEN_PRINTER_IP}`);
-  console.log(`📋 Impresora Caja: ${CASHIER_PRINTER_TYPE} - ${CASHIER_PRINTER_PATH || CASHIER_PRINTER_IP}`);
+  console.log(`📋 ========== CONFIGURACIÓN DE IMPRESORAS ==========`);
+  console.log(`📋 Impresora Cocina:`);
+  console.log(`   - Tipo: ${KITCHEN_PRINTER_TYPE}`);
+  if (KITCHEN_PRINTER_TYPE === 'network') {
+    console.log(`   - IP: ${KITCHEN_PRINTER_IP || '❌ NO CONFIGURADO'}`);
+    console.log(`   - Puerto: ${KITCHEN_PRINTER_PORT || '❌ NO CONFIGURADO'}`);
+  } else {
+    console.log(`   - Path: ${KITCHEN_PRINTER_PATH || '❌ NO CONFIGURADO'}`);
+  }
+  console.log(`📋 Impresora Caja:`);
+  console.log(`   - Tipo: ${CASHIER_PRINTER_TYPE}`);
+  if (CASHIER_PRINTER_TYPE === 'network') {
+    console.log(`   - IP: ${CASHIER_PRINTER_IP || '❌ NO CONFIGURADO'}`);
+    console.log(`   - Puerto: ${CASHIER_PRINTER_PORT || '❌ NO CONFIGURADO'}`);
+  } else {
+    console.log(`   - Path: ${CASHIER_PRINTER_PATH || '❌ NO CONFIGURADO'}`);
+  }
+  console.log(`📋 ================================================`);
 });
 
 // Manejar errores

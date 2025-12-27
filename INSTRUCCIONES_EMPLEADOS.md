@@ -157,3 +157,5 @@ Los usuarios con rol `mesero` pueden:
 2. Verifica que el usuario esté autenticado correctamente
 3. Verifica las políticas RLS en Supabase
 
+
+

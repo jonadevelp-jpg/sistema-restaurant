@@ -155,3 +155,5 @@ Si ves tu token real en los logs, el problema está resuelto. ✅
 
 **El problema es que el servicio no estaba cargando el `.env`. Con estos cambios se soluciona.** ✅
 
+
+

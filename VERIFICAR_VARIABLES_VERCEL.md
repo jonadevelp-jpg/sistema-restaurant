@@ -121,3 +121,5 @@ En Vercel, las variables pueden estar configuradas para:
 
 **Si ves "PRINT_SERVICE_URL: FALTANTE" en los logs de Vercel, las variables no están configuradas o no se redesplegó.** 🔍
 
+
+

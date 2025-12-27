@@ -152,3 +152,5 @@ export async function obtenerEstadisticasPropinas(periodo: 'semana' | 'quincena'
   }
 }
 
+
+

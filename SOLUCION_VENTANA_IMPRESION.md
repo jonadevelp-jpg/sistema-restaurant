@@ -92,3 +92,5 @@ Cuando cambies el estado a "Preparación", deberías ver:
 
 **¡Limpia la caché del navegador y prueba de nuevo!** 🔄
 
+
+

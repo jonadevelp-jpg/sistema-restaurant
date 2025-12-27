@@ -103,3 +103,5 @@ Si está en verde, **¡está funcionando!** ✅
 
 **¡Con esto, el dueño solo necesita ejecutar el script una vez y listo!** 🎉
 
+
+

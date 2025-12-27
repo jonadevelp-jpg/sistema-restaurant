@@ -142,3 +142,5 @@ mesero_id = auth.uid()
 
 **¡Después de ejecutar la migración, las mesas deberían sincronizarse correctamente entre admin y mesero!** ✅
 
+
+

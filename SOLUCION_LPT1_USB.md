@@ -165,3 +165,5 @@ Luego, cuando cambies una orden a "En Preparación", debería intentar imprimir.
 
 **¡Una vez que aparezca como COM3 o COM4, todo funcionará perfectamente!** 🎉
 
+
+

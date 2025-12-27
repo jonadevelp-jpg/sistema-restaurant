@@ -201,3 +201,5 @@ El sistema ahora es:
 - ✅ **Fácil de usar** para meseros con celulares
 - ✅ **Rápido y fluido** en todas las interacciones
 
+
+

@@ -220,3 +220,5 @@ Este script verificará:
 
 **Ejecuta el diagnóstico y dime qué muestra.** 🔍
 
+
+

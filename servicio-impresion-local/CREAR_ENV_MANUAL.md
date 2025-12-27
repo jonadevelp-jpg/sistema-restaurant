@@ -107,3 +107,5 @@ PRINTER_CASHIER_PATH=USB002
 
 **¡Ejecuta `crear-env.bat` y listo!** ✅
 
+
+

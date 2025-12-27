@@ -150,3 +150,5 @@ PRINT_SERVICE_TOKEN=TU_TOKEN_DEL_ARCHIVO_ENV
 
 **¡Después de configurar en Vercel, debería funcionar desde cualquier dispositivo!** 🎉
 
+
+
