@@ -119,9 +119,64 @@ try {
     // Método 4: Usar función create() si está disponible
     if ((!USB || !Network) && escpos.create) {
       console.log('⚠️  Intentando usar escpos.create()...');
-      // create() puede crear adaptadores, pero necesitamos probarlo
-      // Por ahora, solo registramos que existe
-      console.log('   Función create() disponible, pero requiere prueba manual');
+      try {
+        // En escpos 3.0, create() puede crear adaptadores
+        // Intentar crear adaptador USB
+        if (!USB) {
+          try {
+            const usbAdapter = escpos.create('usb');
+            if (usbAdapter) {
+              USB = usbAdapter;
+              console.log('✅ USB creado usando escpos.create("usb") (método 4)');
+            }
+          } catch (e) {
+            console.warn('   No se pudo crear USB con create("usb"):', e.message);
+          }
+        }
+        
+        // Intentar crear adaptador Network
+        if (!Network) {
+          try {
+            const networkAdapter = escpos.create('network');
+            if (networkAdapter) {
+              Network = networkAdapter;
+              console.log('✅ Network creado usando escpos.create("network") (método 4)');
+            }
+          } catch (e) {
+            console.warn('   No se pudo crear Network con create("network"):', e.message);
+          }
+        }
+      } catch (createError) {
+        console.warn('   Error usando create():', createError.message);
+      }
+    }
+    
+    // Método 5: Asignar directamente desde módulos si están disponibles pero no exportan correctamente
+    if (!USB) {
+      try {
+        const escposUSB = require('escpos-usb');
+        // Intentar asignar directamente a escpos.USB
+        if (escposUSB) {
+          escpos.USB = escposUSB;
+          USB = escposUSB;
+          console.log('✅ USB asignado directamente desde escpos-usb (método 5)');
+        }
+      } catch (e) {
+        // Ignorar si no está disponible
+      }
+    }
+    
+    if (!Network) {
+      try {
+        const escposNetwork = require('escpos-network');
+        if (escposNetwork) {
+          escpos.Network = escposNetwork;
+          Network = escposNetwork;
+          console.log('✅ Network asignado directamente desde escpos-network (método 5)');
+        }
+      } catch (e) {
+        // Ignorar si no está disponible
+      }
     }
   }
   

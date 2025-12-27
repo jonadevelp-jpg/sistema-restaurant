@@ -16,16 +16,23 @@ Esto significa que en la versión `3.0.0-alpha.6` de `escpos`, las clases `USB` 
 
 ## ✅ Solución
 
-### Paso 1: Instalar Módulos Adicionales
+### Paso 1: Intentar Instalar Módulos Adicionales
 
 **En la PC donde está la impresora:**
 
 ```cmd
 cd C:\Users\TxPOS\sistema-restaurant\servicio-impresion-local
-npm install escpos-usb escpos-network
+instalar-modulos.bat
 ```
 
-Esto instalará los módulos necesarios para conectar a impresoras USB y de red.
+O manualmente:
+
+```cmd
+npm install escpos-usb
+npm install escpos-network
+```
+
+**Nota:** Si estos módulos no existen en npm o no se pueden instalar, no te preocupes. El código intentará otros métodos automáticamente.
 
 ---
 
@@ -61,9 +68,17 @@ encontrar-puerto-impresora.bat
 
 ## 🔍 Alternativas Si Los Módulos No Funcionan
 
-### Opción 1: Cambiar Versión de escpos
+### Opción 1: Usar Función create() (Recomendado)
 
-Si `escpos-usb` y `escpos-network` no funcionan, puedes probar con una versión diferente:
+El código actualizado ahora intenta usar `escpos.create()` automáticamente. Esta función está disponible en escpos 3.0 y puede crear adaptadores USB y Network.
+
+**No necesitas hacer nada adicional**, el código lo intentará automáticamente.
+
+---
+
+### Opción 2: Cambiar Versión de escpos
+
+Si `escpos.create()` no funciona, puedes probar con una versión diferente:
 
 ```cmd
 npm uninstall escpos escpos-usb escpos-network
