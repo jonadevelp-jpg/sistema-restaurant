@@ -72,35 +72,83 @@ let Network, USB, Printer;
 
 try {
   escpos = require('escpos');
+  Printer = escpos.Printer;
   
-  // Intentar diferentes formas de importación según la versión
+  console.log('✅ escpos base importado');
+  console.log('   Keys disponibles:', Object.keys(escpos).join(', '));
+  
+  // Intentar diferentes métodos para obtener USB y Network
+  
+  // Método 1: Directamente desde escpos
   if (escpos.USB) {
-    // Versión donde USB está en el objeto principal
-    Network = escpos.Network;
     USB = escpos.USB;
-    Printer = escpos.Printer;
-    console.log('✅ escpos importado correctamente (método 1)');
-  } else if (escpos.default && escpos.default.USB) {
-    // Versión con default export
-    Network = escpos.default.Network;
+    Network = escpos.Network;
+    console.log('✅ USB y Network encontrados directamente (método 1)');
+  }
+  // Método 2: Desde default export
+  else if (escpos.default && escpos.default.USB) {
     USB = escpos.default.USB;
-    Printer = escpos.default.Printer;
-    console.log('✅ escpos importado correctamente (método 2)');
-  } else {
-    // Intentar desestructuración directa
-    ({ Network, USB, Printer } = escpos);
-    console.log('✅ escpos importado correctamente (método 3)');
+    Network = escpos.default.Network;
+    console.log('✅ USB y Network encontrados en default (método 2)');
+  }
+  // Método 3: Módulos separados escpos-usb y escpos-network
+  else {
+    try {
+      const escposUSB = require('escpos-usb');
+      const escposNetwork = require('escpos-network');
+      
+      if (escposUSB && escposUSB.USB) {
+        USB = escposUSB.USB;
+        console.log('✅ USB encontrado en escpos-usb (método 3)');
+      } else if (typeof escposUSB === 'function') {
+        USB = escposUSB;
+        console.log('✅ USB encontrado como función en escpos-usb (método 3)');
+      }
+      
+      if (escposNetwork && escposNetwork.Network) {
+        Network = escposNetwork.Network;
+        console.log('✅ Network encontrado en escpos-network (método 3)');
+      } else if (typeof escposNetwork === 'function') {
+        Network = escposNetwork;
+        console.log('✅ Network encontrado como función en escpos-network (método 3)');
+      }
+    } catch (moduleError) {
+      console.warn('⚠️  Módulos escpos-usb/escpos-network no disponibles:', moduleError.message);
+    }
+    
+    // Método 4: Usar función create() si está disponible
+    if ((!USB || !Network) && escpos.create) {
+      console.log('⚠️  Intentando usar escpos.create()...');
+      // create() puede crear adaptadores, pero necesitamos probarlo
+      // Por ahora, solo registramos que existe
+      console.log('   Función create() disponible, pero requiere prueba manual');
+    }
   }
   
-  // Verificar que las clases estén disponibles
-  if (!USB || typeof USB !== 'function') {
-    throw new Error('USB no está disponible o no es una función');
-  }
+  // Verificar que Printer esté disponible
   if (!Printer || typeof Printer !== 'function') {
     throw new Error('Printer no está disponible o no es una función');
   }
   
-  console.log('✅ Clases USB y Printer verificadas correctamente');
+  // Verificar USB (puede no estar disponible si no se instalaron los módulos)
+  if (!USB || typeof USB !== 'function') {
+    console.error('❌ USB NO está disponible');
+    console.error('   Solución: Instala los módulos adicionales:');
+    console.error('   npm install escpos-usb escpos-network');
+    console.error('   O usa una versión diferente de escpos que incluya USB/Network');
+    // No salimos del proceso, pero registramos el error
+  } else {
+    console.log('✅ USB verificado correctamente');
+  }
+  
+  // Verificar Network (puede no estar disponible)
+  if (!Network || typeof Network !== 'function') {
+    console.warn('⚠️  Network NO está disponible (solo necesario para impresoras de red)');
+  } else {
+    console.log('✅ Network verificado correctamente');
+  }
+  
+  console.log('✅ Importación de escpos completada');
 } catch (importError) {
   console.error('❌ ERROR importando escpos:', importError.message);
   console.error('❌ Stack:', importError.stack);
@@ -163,6 +211,17 @@ function connectPrinter(type, path, ip, port) {
       console.log(`🔌 Creando dispositivo de red: ${ip}:${port}`);
       device = new Network(ip, port);
     } else if (type === 'usb') {
+      if (!USB || typeof USB !== 'function') {
+        console.error(`❌ USB no está disponible`);
+        console.error(`   La clase USB no se pudo cargar desde escpos`);
+        console.error(`   Solución:`);
+        console.error(`   1. Instala los módulos adicionales:`);
+        console.error(`      npm install escpos-usb escpos-network`);
+        console.error(`   2. O cambia a una versión de escpos que incluya USB`);
+        console.error(`   3. O usa una impresora de red en lugar de USB`);
+        throw new Error('USB no está disponible. Instala escpos-usb: npm install escpos-usb');
+      }
+      
       if (!path) {
         console.error(`❌ Configuración incompleta para impresora USB:`);
         console.error(`   - Path requerido: ${path ? '✅' : '❌ FALTA'}`);
