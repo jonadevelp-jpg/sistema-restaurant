@@ -16,16 +16,14 @@ interface OrdenItem {
 interface Orden {
   id: string;
   numero_orden: string;
-  mesa_id: string;
+  tipo_pedido?: 'barra' | 'llevar' | null;
+  mesa_id?: string | null; // Mantener para compatibilidad con órdenes antiguas
   estado: string;
   total: number;
   nota?: string;
   created_at: string;
   metodo_pago?: string;
   paid_at?: string;
-  mesas?: {
-    numero: number;
-  };
 }
 
 interface BoletaClienteProps {
@@ -143,14 +141,22 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
       <div ref={printRef} className="boleta-cliente">
         {/* Encabezado */}
         <div className="boleta-header">
-          <div className="boleta-logo">GOURMET ÁRABE SPA</div>
+          <div className="boleta-logo">COMPLETOS & CHURRASCOS</div>
           <div className="boleta-subtitle">RUT: 77669643-9</div>
           <div className="boleta-subtitle">Providencia 1388 Local 49</div>
           <div className="boleta-subtitle">Celular: 939459286</div>
           <div className="boleta-separator-small"></div>
           <div className="boleta-info">
             <div>Orden: {orden.numero_orden}</div>
-            <div>Mesa: {orden.mesas?.numero || 'Para Llevar'}</div>
+            <div>
+              {orden.tipo_pedido === 'barra' 
+                ? '🪑 Consumir en Barra' 
+                : orden.tipo_pedido === 'llevar' 
+                ? '📦 Para Llevar'
+                : orden.mesa_id 
+                ? `Mesa: ${orden.mesa_id}` // Compatibilidad con órdenes antiguas
+                : 'Para Llevar'}
+            </div>
             <div>Fecha: {new Date(orden.created_at).toLocaleDateString('es-CL')}</div>
             <div>Hora: {new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>

@@ -49,29 +49,33 @@ npm run dev
 
 La aplicación estará disponible en `http://localhost:4321`
 
-## 🚀 Deploy a Vercel
+## 🚀 Deploy a Producción
 
-### Opción 1: Deploy Automático desde GitHub
+### Guía Completa de Deploy
+
+Sigue la guía completa en: **[`DEPLOY.md`](./DEPLOY.md)**
+
+### Resumen Rápido
 
 1. **Sube el código a GitHub:**
-   - Sigue las instrucciones en [`COMANDOS_GITHUB.md`](./COMANDOS_GITHUB.md)
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/TU_USUARIO/TU_REPOSITORIO.git
+   git push -u origin main
+   ```
 
-2. **Conecta con Vercel:**
-   - Ve a [Vercel](https://vercel.com)
+2. **Deploy en Vercel:**
+   - Ve a [Vercel Dashboard](https://vercel.com/dashboard)
    - Importa tu repositorio de GitHub
    - Configura las variables de entorno:
      - `PUBLIC_SUPABASE_URL`
      - `PUBLIC_SUPABASE_ANON_KEY`
+     - `SUPABASE_SERVICE_ROLE_KEY`
    - Haz clic en "Deploy"
 
-### Opción 2: Deploy Manual
-
-```bash
-npm install -g vercel
-vercel
-```
-
-Sigue las instrucciones completas en: [`DEPLOY_VERCEL.md`](./DEPLOY_VERCEL.md)
+**📖 Para instrucciones detalladas, ver [`DEPLOY.md`](./DEPLOY.md)**
 
 ## 📁 Estructura del Proyecto
 

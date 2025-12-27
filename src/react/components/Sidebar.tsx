@@ -49,11 +49,7 @@ export default function Sidebar({ currentPath, isOpen = true, onToggle }: Sideba
   const allMenuItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: '📊', roles: ['admin', 'encargado', 'mesero'] },
     { path: '/admin/menu', label: 'Gestión del Menú', icon: '🍽️', roles: ['admin', 'encargado'] },
-    { path: '/admin/mesas', label: 'Mesas (POS)', icon: '🪑', roles: ['admin', 'encargado', 'mesero'] },
-    { path: '/admin/stock', label: 'Gestión de Stock', icon: '📦', roles: ['admin', 'encargado'] },
-    { path: '/admin/ingredientes', label: 'Ingredientes', icon: '🥕', roles: ['admin', 'encargado'] },
-    { path: '/admin/recetas', label: 'Recetas', icon: '📝', roles: ['admin', 'encargado'] },
-    { path: '/admin/compras', label: 'Compras', icon: '🛒', roles: ['admin', 'encargado'] },
+    { path: '/admin/mesas', label: 'Pedidos (POS)', icon: '🪑', roles: ['admin', 'encargado', 'mesero'] },
     { path: '/admin/ordenes', label: 'Órdenes', icon: '📋', roles: ['admin', 'encargado', 'mesero'] },
     { path: '/admin/empleados', label: 'Empleados', icon: '👥', roles: ['admin', 'encargado'] },
     { path: '/admin/menu-imprimible', label: 'Menú Imprimible', icon: '🖨️', roles: ['admin', 'encargado'] },
@@ -81,32 +77,35 @@ export default function Sidebar({ currentPath, isOpen = true, onToggle }: Sideba
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Premium Minimalista */}
       <div
         className={`
           fixed lg:static
           top-0 left-0
-          w-64 bg-slate-900 text-white min-h-screen flex flex-col z-50
+          w-64 bg-white min-h-screen flex flex-col z-50
           transform transition-transform duration-300 ease-in-out
           ${isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : ''}
         `}
+        style={{
+          boxShadow: '2px 0 12px rgba(0, 0, 0, 0.04), 1px 0 4px rgba(0, 0, 0, 0.02)',
+        }}
       >
         {/* Header con botón cerrar en móvil */}
-        <div className="p-4 lg:p-6 border-b border-slate-700 flex items-center justify-between">
+        <div className="p-6 border-b border-warm-200 flex items-center justify-between">
           <div className="flex-1">
-            <h1 className="text-lg lg:text-xl font-bold">Restaurant Admin</h1>
-            <p className="text-xs lg:text-sm text-slate-400 mt-1 truncate">
+            <h1 className="text-xl font-bold text-slate-900 font-sans">Admin Panel</h1>
+            <p className="text-sm text-slate-600 mt-1 truncate font-sans">
               {user?.name || user?.email}
             </p>
-            <p className="text-xs text-slate-500 mt-1 capitalize">{user?.role}</p>
+            <p className="text-xs text-slate-500 mt-1 capitalize font-sans">{user?.role}</p>
           </div>
           {isMobile && (
             <button
               onClick={onToggle}
-              className="ml-2 p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              className="ml-2 p-2 hover:bg-warm-100 rounded-lg transition-colors"
               aria-label="Cerrar menú"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -114,8 +113,8 @@ export default function Sidebar({ currentPath, isOpen = true, onToggle }: Sideba
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 p-2 lg:p-4 overflow-y-auto">
-          <ul className="space-y-1 lg:space-y-2">
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <ul className="space-y-1">
             {menuItems.map((item) => (
               <li key={item.path}>
                 <a
@@ -126,13 +125,20 @@ export default function Sidebar({ currentPath, isOpen = true, onToggle }: Sideba
                       setTimeout(() => onToggle(), 100);
                     }
                   }}
-                  className={`flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg transition-colors text-sm lg:text-base ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium font-sans ${
                     isActive(item.path)
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-700 hover:bg-warm-100 hover:text-slate-900'
                   }`}
+                  style={
+                    isActive(item.path)
+                      ? {
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)',
+                        }
+                      : {}
+                  }
                 >
-                  <span className="text-lg lg:text-xl">{item.icon}</span>
+                  <span className="text-lg">{item.icon}</span>
                   <span className="truncate">{item.label}</span>
                 </a>
               </li>
@@ -141,10 +147,10 @@ export default function Sidebar({ currentPath, isOpen = true, onToggle }: Sideba
         </nav>
 
         {/* Footer con logout */}
-        <div className="p-2 lg:p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-warm-200">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm lg:text-base"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-warm-100 hover:text-slate-900 transition-all duration-200 text-sm font-medium font-sans"
           >
             <span>🚪</span>
             <span>Cerrar Sesión</span>

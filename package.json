@@ -10,7 +10,8 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check-deploy": "node scripts/check-deploy.js"
   },
   "dependencies": {
     "@astrojs/node": "^8.0.2",

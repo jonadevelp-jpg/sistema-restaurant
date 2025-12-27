@@ -54,9 +54,18 @@ export const POST: APIRoute = async (context) => {
       .from('menu-images')
       .getPublicUrl(fileName);
     
+    const publicUrl = urlData.publicUrl;
+    
+    console.log('✅ Imagen subida exitosamente:', {
+      fileName,
+      publicUrl,
+      hasUrl: !!publicUrl,
+      urlLength: publicUrl?.length
+    });
+    
     return jsonResponse({
       success: true,
-      url: urlData.publicUrl,
+      url: publicUrl,
       fileName,
     });
   } catch (error: any) {

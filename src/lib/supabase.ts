@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Tipos para las tablas de la base de datos
+export type VisualType = 'hero' | 'list' | 'drink' | null;
+export type TipoPedido = 'barra' | 'llevar' | null;
+
 export interface Category {
   id: number;
   name: string;
@@ -8,6 +11,8 @@ export interface Category {
   description: string | null;
   order_num: number;
   is_active: boolean;
+  visual_type?: VisualType; // Tipo de visualización en menú digital
+  image_url?: string | null; // URL de la imagen de la categoría
   created_at: string;
 }
 
@@ -21,6 +26,7 @@ export interface MenuItem {
   is_available: boolean;
   is_featured: boolean;
   order_num: number;
+  visual_type?: VisualType; // Tipo de visualización (heredado de categoría si es null)
   created_at: string;
   updated_at: string;
   category?: Category;
@@ -30,21 +36,44 @@ export interface MenuItem {
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
 
+// Validación más estricta
 if (!supabaseUrl || !supabaseAnonKey) {
-  const errorMsg = '⚠️ ERROR: Variables de entorno de Supabase no configuradas. ' +
-    'Configura PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY en tu plataforma de deploy.';
+  const errorMsg = '⚠️ ERROR CRÍTICO: Variables de entorno de Supabase no configuradas.\n' +
+    'Configura PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY en tu archivo .env\n' +
+    `PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅' : '❌ NO CONFIGURADA'}\n` +
+    `PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅' : '❌ NO CONFIGURADA'}\n` +
+    'Verifica: 1) Que el archivo .env existe en la raíz del proyecto\n' +
+    '          2) Que las variables empiezan con PUBLIC_\n' +
+    '          3) Que reiniciaste el servidor después de modificar .env';
   console.error(errorMsg);
+  
+  // Mostrar alerta en navegador si estamos en cliente
+  if (typeof window !== 'undefined') {
+    console.error('🔴 La aplicación no puede conectarse a Supabase. Revisa la consola para más detalles.');
+  }
 }
 
 // Crear cliente con validación
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+let supabaseClient;
+if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supabase.co') {
+  try {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
       },
-    })
-  : createClient('https://placeholder.supabase.co', 'placeholder-key');
+    });
+    console.log('✅ Cliente de Supabase inicializado correctamente');
+  } catch (error: any) {
+    console.error('❌ Error creando cliente de Supabase:', error);
+    supabaseClient = createClient('https://placeholder.supabase.co', 'placeholder-key');
+  }
+} else {
+  console.error('❌ No se puede crear cliente de Supabase: variables de entorno inválidas');
+  supabaseClient = createClient('https://placeholder.supabase.co', 'placeholder-key');
+}
+
+export const supabase = supabaseClient;
 
 // Helper para subir imágenes a Supabase Storage
 export async function uploadImage(file: File, bucket: string = 'menu-images'): Promise<string | null> {

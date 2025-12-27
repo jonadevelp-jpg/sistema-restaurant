@@ -4,43 +4,59 @@ export default {
   theme: {
     extend: {
       colors: {
-        gold: {
-          50: '#FEF9E7',
-          100: '#FEF3C7',
-          200: '#FDE68A',
-          300: '#FCD34D',
-          400: '#FBBF24',
-          500: '#D4AF37',
-          600: '#B8941F',
-          700: '#9A7A1A',
-          800: '#7C5F15',
-          900: '#5E4710',
+        // Paleta premium minimalista - blancos cálidos
+        warm: {
+          50: '#FDFCFB',   // Blanco cálido más puro
+          100: '#FAF9F7',  // Blanco cálido suave
+          200: '#F5F4F2',  // Gris cálido muy claro
+          300: '#EDEBE8',  // Gris cálido claro
+          400: '#D6D4D0',  // Gris cálido medio
         },
-        terracotta: {
-          50: '#FDF4F0',
-          100: '#FAE6D9',
-          200: '#F5CCB3',
-          300: '#EFB28D',
-          400: '#E89867',
-          500: '#C17A4A',
-          600: '#9E6239',
-          700: '#7B4A28',
-          800: '#583217',
-          900: '#351A06',
+        // Paleta para restaurante de completos/churrascos
+        tomato: {
+          50: '#FFF5F5',
+          100: '#FFE5E5',
+          200: '#FFCCCC',
+          300: '#FF9999',
+          400: '#FF6666',
+          500: '#FF4444',
+          600: '#E63946',
+          700: '#CC2936',
+          800: '#B31E2A',
+          900: '#99131E',
         },
-        arabic: {
-          dark: '#3E2723',
-          brown: '#654321',
-          beige: '#F5E6D3',
-          cream: '#FFF8E7',
+        orange: {
+          50: '#FFF8F0',
+          100: '#FFEED6',
+          200: '#FFDCAD',
+          300: '#FFC985',
+          400: '#FFB75C',
+          500: '#FF9500',
+          600: '#E68500',
+          700: '#CC7500',
+          800: '#B36500',
+          900: '#995500',
+        },
+        fresh: {
+          white: '#FFFFFF',
+          cream: '#FAF9F7',  // Blanco cálido premium
+          light: '#F5F4F2',  // Gris cálido muy suave
+          gray: '#EDEBE8',   // Gris cálido claro
+        },
+        accent: {
+          green: '#22C55E',
+          red: '#EF4444',
+          yellow: '#FBBF24',
         },
         brand: {
-          DEFAULT: '#D4AF37',
+          DEFAULT: '#FF4444',
+          light: '#FF6666',
+          dark: '#E63946',
         }
       },
       fontFamily: {
-        'cinzel': ['Cinzel', 'serif'],
-        'playfair': ['Playfair Display', 'serif'],
+        'sans': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        'display': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
       animation: {
         'float': 'float 3s ease-in-out infinite',

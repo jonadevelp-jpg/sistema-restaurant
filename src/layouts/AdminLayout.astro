@@ -17,13 +17,13 @@ const currentPath = Astro.url.pathname;
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     <meta name="theme-color" content="#1e293b" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="description" content="Panel de administración - Gourmet Árabe" />
-    <title>{title} - Admin | Gourmet Árabe</title>
+    <meta name="description" content="Panel de administración - Completos & Churrascos" />
+    <title>{title} - Admin | Completos & Churrascos</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-slate-50 min-h-screen">
+  <body class="bg-warm-50 min-h-screen">
     <AdminLayoutWrapper client:only="react" currentPath={currentPath}>
       <slot />
     </AdminLayoutWrapper>
@@ -32,7 +32,7 @@ const currentPath = Astro.url.pathname;
 
 <style is:global>
   html {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

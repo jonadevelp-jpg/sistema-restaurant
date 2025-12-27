@@ -1,196 +1,196 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../lib/supabase';
-import { requireAuth, jsonResponse, errorResponse } from '../../lib/api-helpers';
+import { MenuController } from '@backend/controllers/menu.controller';
+import { MenuService } from '@backend/services/menu.service';
 
 // GET - Obtener todas las categorías
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request }) => {
   try {
-    const onlyActive = url.searchParams.get('onlyActive') === 'true';
+    // Crear cliente de Supabase directamente desde las variables de entorno de Astro
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
     
-    let query = supabase
-      .from('categories')
-      .select('*')
-      .order('order_num', { ascending: true });
-    
-    if (onlyActive) {
-      query = query.eq('is_active', true);
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('❌ Variables de entorno no configuradas');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Configuración incompleta' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error obteniendo categorías:', error);
-      return errorResponse('Error al obtener categorías: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+
+    // Importar y crear cliente de Supabase
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Crear servicio y controller con el cliente
+    const menuService = new MenuService(supabaseClient);
+    const menuController = new MenuController(menuService);
+
+    // Llamar al controller
+    return await menuController.getCategories(request as any);
   } catch (error: any) {
-    console.error('Error en GET categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    console.error('❌ Error en GET categories:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
 // POST - Crear nueva categoría
 export const POST: APIRoute = async (context) => {
   try {
-    const authResult = await requireAuth(context);
-    if (authResult instanceof Response) return authResult;
-    const { supabase: authSupabase } = authResult;
-    
-    const body = await context.request.json();
-    const { name, slug, description, order_num, is_active } = body;
-    
-    if (!name) {
-      return errorResponse('El nombre es requerido', 400);
-    }
-    
-    // Generar slug si no se proporciona
-    const finalSlug = slug || name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    
-    const { data, error } = await authSupabase
-      .from('categories')
-      .insert([{
-        name,
-        slug: finalSlug,
-        description: description || null,
-        order_num: order_num || 0,
-        is_active: is_active ?? true,
-      }])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creando categoría:', error);
-      if (error.code === '23505') {
-        return errorResponse('Ya existe una categoría con ese slug', 400);
-      }
-      return errorResponse('Error al crear categoría: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data }, 201);
+    // Crear cliente de Supabase
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Crear servicio y controller
+    const menuService = new MenuService(supabaseClient);
+    const menuController = new MenuController(menuService);
+
+    // Llamar al controller
+    return await menuController.createCategory(context.request as any);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en POST categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
 // PUT - Actualizar categoría
 export const PUT: APIRoute = async (context) => {
   try {
-    const authResult = await requireAuth(context);
-    if (authResult instanceof Response) return authResult;
-    const { supabase: authSupabase } = authResult;
-    
+    // Leer el body una sola vez y clonar el request para el controller
     const body = await context.request.json();
-    const { id, name, slug, description, order_num, is_active } = body;
+    const { id, image_url } = body;
+    
+    console.log('📥 PUT categories-v2 - Datos recibidos:', {
+      id,
+      image_url,
+      image_url_type: typeof image_url,
+      image_url_length: image_url?.length,
+      has_image: !!image_url,
+      body_keys: Object.keys(body),
+      full_body: JSON.stringify(body).substring(0, 500) // Primeros 500 caracteres
+    });
     
     if (!id) {
-      return errorResponse('ID de categoría requerido', 400);
+      return new Response(
+        JSON.stringify({ success: false, error: 'ID de categoría requerido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    
-    const updateData: any = {};
-    if (name !== undefined) updateData.name = name;
-    if (slug !== undefined) updateData.slug = slug;
-    if (description !== undefined) updateData.description = description;
-    if (order_num !== undefined) updateData.order_num = order_num;
-    if (is_active !== undefined) updateData.is_active = is_active;
-    
-    const { data, error } = await authSupabase
-      .from('categories')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error actualizando categoría:', error);
-      return errorResponse('Error al actualizar categoría: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+
+    // Crear cliente de Supabase
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Crear servicio y controller
+    const menuService = new MenuService(supabaseClient);
+    const menuController = new MenuController(menuService);
+
+    // Crear un nuevo request con el body ya parseado para el controller
+    // El controller espera poder leer el body, así que creamos un request clonado
+    const clonedRequest = new Request(context.request.url, {
+      method: context.request.method,
+      headers: context.request.headers,
+      body: JSON.stringify(body),
+    });
+
+    // Llamar al controller con el request clonado
+    return await menuController.updateCategory(clonedRequest as any, id);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PUT categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
 // PATCH - Actualizar parcialmente (ej: toggle is_active)
 export const PATCH: APIRoute = async (context) => {
   try {
-    const authResult = await requireAuth(context);
-    if (authResult instanceof Response) return authResult;
-    const { supabase: authSupabase } = authResult;
-    
+    // Leer el body una sola vez y clonar el request para el controller
     const body = await context.request.json();
     const { id, ...updates } = body;
     
     if (!id) {
-      return errorResponse('ID de categoría requerido', 400);
+      return new Response(
+        JSON.stringify({ success: false, error: 'ID de categoría requerido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    
-    const { data, error } = await authSupabase
-      .from('categories')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error actualizando categoría:', error);
-      return errorResponse('Error al actualizar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+
+    // Crear cliente de Supabase
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Crear servicio y controller
+    const menuService = new MenuService(supabaseClient);
+    const menuController = new MenuController(menuService);
+
+    // Crear un nuevo request con el body ya parseado para el controller
+    const clonedRequest = new Request(context.request.url, {
+      method: context.request.method,
+      headers: context.request.headers,
+      body: JSON.stringify(body),
+    });
+
+    // Llamar al controller (PATCH usa updateCategory)
+    return await menuController.updateCategory(clonedRequest as any, id);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PATCH categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
 // DELETE - Eliminar categoría
 export const DELETE: APIRoute = async (context) => {
   try {
-    const authResult = await requireAuth(context);
-    if (authResult instanceof Response) return authResult;
-    const { supabase: authSupabase } = authResult;
-    
+    // Leer el body una sola vez
     const body = await context.request.json();
     const { id } = body;
     
     if (!id) {
-      return errorResponse('ID de categoría requerido', 400);
+      return new Response(
+        JSON.stringify({ success: false, error: 'ID de categoría requerido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    
-    // Primero, actualizar items que tengan esta categoría (ponerlos sin categoría)
-    await authSupabase
-      .from('menu_items')
-      .update({ category_id: null })
-      .eq('category_id', id);
-    
-    // Luego eliminar la categoría
-    const { error } = await authSupabase
-      .from('categories')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('Error eliminando categoría:', error);
-      return errorResponse('Error al eliminar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, message: 'Categoría eliminada' });
+
+    // Crear cliente de Supabase
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Crear servicio y controller
+    const menuService = new MenuService(supabaseClient);
+    const menuController = new MenuController(menuService);
+
+    // DELETE no necesita el body, solo el id
+    return await menuController.deleteCategory(context.request as any, id);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en DELETE categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 

@@ -4,6 +4,7 @@ import HalalInfo from '../components/HalalInfo';
 import NavigationMenu from '../components/NavigationMenu';
 import CategoryHero from '../components/CategoryHero';
 import Footer from '../components/Footer.astro';
+import MenuSectionSimplified from '../components/public/MenuSectionSimplified';
 import { supabase } from '../lib/supabase';
 
 const { category: categorySlug } = Astro.params;
@@ -19,10 +20,10 @@ let heroImages: string[] = [];
 
 if (isConfigured) {
   try {
-    // Obtener la categoría por slug
+    // Obtener la categoría por slug (incluyendo visual_type)
     const { data: cat, error: catError } = await supabase
       .from('categories')
-      .select('*')
+      .select('id, name, slug, description, order_num, is_active, visual_type, image_url')
       .eq('slug', categorySlug)
       .eq('is_active', true)
       .single();
@@ -76,23 +77,13 @@ if (isConfigured) {
   return Astro.redirect('/');
 }
 
-const formatPrice = (price: number) => {
-  if (price === 0) return 'Consultar';
-  return '$' + new Intl.NumberFormat('es-CL').format(price);
-};
-
-const hasMeat = (itemName: string, description: string = '') => {
-  const meatKeywords = ['carne', 'pollo', 'kebab', 'kebbab', 'mixto', 'vacuno', 'halal'];
-  const text = `${itemName} ${description}`.toLowerCase();
-  return meatKeywords.some(keyword => text.includes(keyword));
-};
+// Funciones helper ya no necesarias - el componente MenuSectionSimplified las maneja
 ---
 
-<PublicLayout title={`${category.name} - Gourmet Árabe`}>
+<PublicLayout title={`${category.name} - Completos & Churrascos`}>
   <NavigationMenu client:load categories={allCategories} currentSlug={categorySlug} />
   
-  <div class="min-h-screen bg-[#0a0a0a] relative">
-    <div class="absolute inset-0 opacity-10 z-0" style="background-image: url('/fondo.png'); background-size: cover; background-position: center;"></div>
+  <div class="min-h-screen bg-warm-50 relative">
     
     <div class="relative z-10">
       <!-- Hero de la categoría con imagen -->
@@ -103,70 +94,21 @@ const hasMeat = (itemName: string, description: string = '') => {
         categoryImage={category.image_url}
       />
 
-      <!-- Grid de productos -->
+      <!-- Menú simplificado con visual_type -->
       <div class="px-4 pb-12">
         <div class="max-w-6xl mx-auto">
           {items && items.length > 0 ? (
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {items.map((item) => (
-                <div class="menu-card group">
-                  <div class="relative border-gold-elegant rounded-lg overflow-hidden bg-black/70 backdrop-blur-sm transition-all duration-300">
-                    
-                    {item.image_url && (
-                      <div class="relative h-48 overflow-hidden menu-image-container">
-                        <img 
-                          src={item.image_url} 
-                          alt={item.name}
-                          class="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                        {item.is_featured && (
-                          <div class="absolute top-3 right-3 bg-gold-500 text-black px-2 py-1 rounded text-xs font-bold z-20">
-                            ⭐ DESTACADO
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div class="p-4">
-                      <div class="flex justify-between items-start gap-4">
-                        <div class="flex-1">
-                          <div class="flex items-center gap-2 mb-1">
-                            <h3 class="font-cinzel text-gold-400 text-lg font-bold leading-tight">
-                              {item.name.toUpperCase()}
-                            </h3>
-                            {hasMeat(item.name, item.description) && (
-                              <span 
-                                class="inline-flex items-center gap-1 bg-gold-600/20 text-gold-400 px-2 py-0.5 rounded text-xs font-semibold border border-gold-600/50"
-                                title="Preparado con carne halal certificada"
-                              >
-                                🕌 HALAL
-                              </span>
-                            )}
-                            {!item.image_url && item.is_featured && (
-                              <span class="text-sm">⭐</span>
-                            )}
-                          </div>
-                          {item.description && (
-                            <p class="text-gold-200/70 text-sm leading-relaxed">{item.description}</p>
-                          )}
-                        </div>
-                        <div class="text-right flex-shrink-0">
-                          <span class="font-cinzel text-gold-400 text-xl font-bold">
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <MenuSectionSimplified 
+              client:load
+              categoryId={category.id}
+              categoryName={category.name}
+              categoryVisualType={category.visual_type}
+            />
           ) : (
             <div class="text-center py-16">
-              <div class="border-2 border-gold-600/50 rounded-lg p-8 bg-black/50 max-w-md mx-auto">
-                <p class="text-gold-400 text-xl mb-4">No hay items disponibles</p>
-                <a href="/" class="text-gold-300 hover:text-gold-400 underline">Volver al inicio</a>
+              <div class="border-2 border-tomato-300/50 rounded-xl p-8 bg-white/90 max-w-md mx-auto shadow-lg">
+                <p class="text-tomato-600 text-xl mb-4 font-semibold">No hay items disponibles</p>
+                <a href="/" class="text-tomato-500 hover:text-tomato-600 underline font-medium">Volver al inicio</a>
               </div>
             </div>
           )}

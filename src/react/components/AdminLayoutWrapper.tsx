@@ -49,7 +49,10 @@ export default function AdminLayoutWrapper({ children, currentPath }: AdminLayou
         <div className="lg:hidden fixed top-4 left-4 z-30">
           <button
             onClick={toggleSidebar}
-            className="p-2 bg-slate-900 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-colors"
+            className="p-3 bg-white text-slate-700 rounded-xl shadow-lg hover:bg-warm-100 transition-all duration-200"
+            style={{
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+            }}
             aria-label="Abrir menú"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

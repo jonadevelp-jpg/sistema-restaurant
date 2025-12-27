@@ -4,10 +4,11 @@ import { supabase } from '@/lib/supabase';
 interface ImageUploadProps {
   currentImage?: string | null;
   onImageChange: (imageUrl: string | null) => void;
+  onUploadingChange?: (isUploading: boolean) => void;
   disabled?: boolean;
 }
 
-export default function ImageUpload({ currentImage, onImageChange, disabled }: ImageUploadProps) {
+export default function ImageUpload({ currentImage, onImageChange, onUploadingChange, disabled }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function ImageUpload({ currentImage, onImageChange, disabled }: I
 
     setError(null);
     setUploading(true);
+    onUploadingChange?.(true); // Notificar que se está subiendo
 
     try {
       // Mostrar preview local inmediatamente
@@ -59,21 +61,37 @@ export default function ImageUpload({ currentImage, onImageChange, disabled }: I
 
       const result = await response.json();
 
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('No estás autenticado. Por favor, recarga la página e inicia sesión nuevamente.');
+          setPreview(currentImage || null);
+          setUploading(false);
+          return;
+        } else if (response.status === 403) {
+          setError(`No tienes permisos para subir imágenes: ${result.error || 'Tu usuario no tiene permisos suficientes'}`);
+          setPreview(currentImage || null);
+          setUploading(false);
+          return;
+        }
+      }
+
       if (result.success && result.url) {
         console.log('✅ Imagen subida correctamente:', result.url);
         setPreview(result.url);
         onImageChange(result.url);
+        setError(null);
       } else {
         console.error('❌ Error subiendo imagen:', result);
-        setError(result.error || 'Error al subir la imagen');
+        setError(result.error || 'Error al subir la imagen. Verifica que tengas permisos y que la imagen sea válida.');
         setPreview(currentImage || null);
       }
-    } catch (err) {
-      console.error('Error subiendo imagen:', err);
-      setError('Error de conexión al subir la imagen');
+    } catch (err: any) {
+      console.error('❌ Error subiendo imagen:', err);
+      setError(`Error de conexión: ${err.message || 'No se pudo conectar con el servidor'}`);
       setPreview(currentImage || null);
     } finally {
       setUploading(false);
+      onUploadingChange?.(false); // Notificar que terminó la subida
     }
   };
 

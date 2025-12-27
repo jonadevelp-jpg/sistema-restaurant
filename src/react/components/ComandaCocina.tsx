@@ -17,14 +17,12 @@ interface OrdenItem {
 interface Orden {
   id: string;
   numero_orden: string;
-  mesa_id: string;
+  tipo_pedido?: 'barra' | 'llevar' | null;
+  mesa_id?: string | null; // Mantener para compatibilidad con órdenes antiguas
   estado: string;
   total: number;
   nota?: string;
   created_at: string;
-  mesas?: {
-    numero: number;
-  };
 }
 
 interface ComandaCocinaProps {
@@ -113,7 +111,15 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           <div className="comanda-title">COMANDA COCINA</div>
           <div className="comanda-info">
             <div>Orden: {orden.numero_orden}</div>
-            <div>Mesa: {orden.mesas?.numero || 'N/A'}</div>
+            <div>
+              {orden.tipo_pedido === 'barra' 
+                ? '🪑 Consumir en Barra' 
+                : orden.tipo_pedido === 'llevar' 
+                ? '📦 Para Llevar'
+                : orden.mesa_id 
+                ? `Mesa: ${orden.mesa_id}` // Compatibilidad con órdenes antiguas
+                : 'N/A'}
+            </div>
             <div>Hora: {new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
         </div>

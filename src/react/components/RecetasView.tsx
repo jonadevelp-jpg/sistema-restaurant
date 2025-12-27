@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { formatCLP } from '@/lib/currency';
+import { formatCLP } from '@/utils/currency';
 
 interface Ingrediente {
   id: string;

@@ -3,12 +3,29 @@ import { supabase, deleteImage } from '../../lib/supabase';
 import { requireAuth, jsonResponse, errorResponse } from '../../lib/api-helpers';
 
 // GET - Obtener todos los items del menú
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, request }) => {
   try {
     const categoryId = url.searchParams.get('categoryId');
     const availableOnly = url.searchParams.get('availableOnly') === 'true';
     
-    let query = supabase
+    // Usar el cliente de Supabase con autenticación si está disponible
+    let client = supabase;
+    
+    // Intentar obtener token de autenticación (opcional para lectura pública)
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+      const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+      if (supabaseUrl && supabaseAnonKey) {
+        client = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } }
+        });
+      }
+    }
+    
+    let query = client
       .from('menu_items')
       .select(`
         *,
@@ -31,6 +48,9 @@ export const GET: APIRoute = async ({ url }) => {
       return errorResponse('Error al obtener items: ' + error.message, 500);
     }
     
+    // Log para debugging
+    console.log(`✅ GET menu-items: ${data?.length || 0} items encontrados`);
+    
     return jsonResponse({ success: true, data });
   } catch (error: any) {
     console.error('Error en GET menu-items:', error);
@@ -41,11 +61,12 @@ export const GET: APIRoute = async ({ url }) => {
 // POST - Crear nuevo item
 export const POST: APIRoute = async (context) => {
   try {
+    // Leer el body ANTES de requireAuth para evitar problemas
+    const body = await context.request.json();
+    
     const authResult = await requireAuth(context);
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
-    
-    const body = await request.json();
     const { name, description, price, category_id, image_url, is_available, is_featured, order_num } = body;
     
     if (!name) {
@@ -86,12 +107,22 @@ export const POST: APIRoute = async (context) => {
 // PUT - Actualizar item completo
 export const PUT: APIRoute = async (context) => {
   try {
+    // Leer el body ANTES de requireAuth para evitar problemas
+    const body = await context.request.json();
+    
     const authResult = await requireAuth(context);
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
-    
-    const body = await context.request.json();
     const { id, name, description, price, category_id, image_url, is_available, is_featured, order_num } = body;
+    
+    console.log('📥 PUT menu-items-v2 - Datos recibidos:', {
+      id,
+      name,
+      image_url,
+      image_url_type: typeof image_url,
+      image_url_length: image_url?.length,
+      has_image: !!image_url
+    });
     
     if (!id) {
       return errorResponse('ID del item requerido', 400);
@@ -115,10 +146,21 @@ export const PUT: APIRoute = async (context) => {
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = price;
     if (category_id !== undefined) updateData.category_id = category_id;
-    if (image_url !== undefined) updateData.image_url = image_url;
+    if (image_url !== undefined) {
+      // Asegurarse de que image_url se guarde correctamente (incluso si es null)
+      updateData.image_url = image_url || null;
+      console.log('🖼️ Guardando image_url:', {
+        value: updateData.image_url,
+        type: typeof updateData.image_url,
+        isNull: updateData.image_url === null,
+        isUndefined: updateData.image_url === undefined
+      });
+    }
     if (is_available !== undefined) updateData.is_available = is_available;
     if (is_featured !== undefined) updateData.is_featured = is_featured;
     if (order_num !== undefined) updateData.order_num = order_num;
+    
+    console.log('💾 Datos a actualizar en BD:', updateData);
     
     const { data, error } = await authSupabase
       .from('menu_items')
@@ -131,9 +173,16 @@ export const PUT: APIRoute = async (context) => {
       .single();
     
     if (error) {
-      console.error('Error actualizando item:', error);
+      console.error('❌ Error actualizando item:', error);
       return errorResponse('Error al actualizar: ' + error.message, 500);
     }
+    
+    console.log('✅ Item actualizado exitosamente:', {
+      id: data?.id,
+      name: data?.name,
+      image_url: data?.image_url,
+      has_image: !!data?.image_url
+    });
     
     return jsonResponse({ success: true, data });
   } catch (error: any) {
@@ -146,11 +195,12 @@ export const PUT: APIRoute = async (context) => {
 // PATCH - Actualizar parcialmente (toggle disponible, destacado, etc.)
 export const PATCH: APIRoute = async (context) => {
   try {
+    // Leer el body ANTES de requireAuth para evitar problemas
+    const body = await context.request.json();
+    
     const authResult = await requireAuth(context);
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
-    
-    const body = await context.request.json();
     const { id, ...updates } = body;
     
     if (!id) {
@@ -182,11 +232,12 @@ export const PATCH: APIRoute = async (context) => {
 // DELETE - Eliminar item
 export const DELETE: APIRoute = async (context) => {
   try {
+    // Leer el body ANTES de requireAuth para evitar problemas
+    const body = await context.request.json();
+    
     const authResult = await requireAuth(context);
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
-    
-    const body = await context.request.json();
     const { id } = body;
     
     if (!id) {

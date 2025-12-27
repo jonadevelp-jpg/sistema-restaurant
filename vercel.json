@@ -1,17 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "astro",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/"
-    }
-  ]
+  "framework": "astro"
 }
-
-
-
-

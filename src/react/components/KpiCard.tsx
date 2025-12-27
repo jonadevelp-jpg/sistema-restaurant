@@ -9,13 +9,25 @@ interface KpiCardProps {
 
 export default function KpiCard({ title, value, icon, className = "" }: KpiCardProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+    <div 
+      className={`bg-white rounded-2xl p-6 ${className}`}
+      style={{
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
+      }}
+    >
       <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm text-slate-600 mb-1">{title}</div>
-          <div className="text-2xl font-semibold text-slate-900">{value}</div>
+        <div className="flex-1">
+          <div className="text-sm text-slate-500 mb-2 font-medium font-sans">{title}</div>
+          <div className="text-3xl font-bold text-slate-900 font-sans tracking-tight">{value}</div>
         </div>
-        {icon && <div className="text-3xl opacity-60">{icon}</div>}
+        {icon && (
+          <div 
+            className="text-4xl opacity-40"
+            style={{ filter: 'grayscale(20%)' }}
+          >
+            {icon}
+          </div>
+        )}
       </div>
     </div>
   );

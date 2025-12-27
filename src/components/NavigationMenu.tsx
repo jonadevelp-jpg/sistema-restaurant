@@ -50,7 +50,7 @@ export default function NavigationMenu({ categories, currentSlug }: NavigationMe
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black/95 backdrop-blur-md shadow-lg border-b border-gold-600/20 transform ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/95 backdrop-blur-md shadow-lg border-b border-tomato-300/30 transform ${
         isScrolled || currentSlug ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}
     >
@@ -63,17 +63,18 @@ export default function NavigationMenu({ categories, currentSlug }: NavigationMe
           >
             <img
               src="/logo-cropped.png"
-              alt="Gourmet Árabe"
+              alt="Completos & Churrascos"
               className="w-8 h-8 md:w-10 md:h-10 object-contain"
             />
-            <span className="font-cinzel text-gold-400 text-sm md:text-base font-semibold hidden sm:block">
-              GOURMET ÁRABE
+            <span className="font-bold text-tomato-600 text-sm md:text-base hidden sm:block font-sans">
+              COMPLETOS & CHURRASCOS
             </span>
           </a>
           <a
             href="/menu-imprimible"
-            className="text-gold-400/60 hover:text-gold-400 text-xs px-2 py-0.5 border border-gold-600/30 rounded hover:border-gold-600/50 transition-colors"
+            className="text-slate-600 hover:text-tomato-600 text-sm px-3 py-1.5 rounded-xl bg-warm-50 hover:bg-warm-100 font-medium transition-all duration-300"
             title="Versión imprimible"
+            style={{ boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.08)' }}
           >
             📄
           </a>
@@ -96,14 +97,22 @@ export default function NavigationMenu({ categories, currentSlug }: NavigationMe
                     key={category.id}
                     href={`/${category.slug}`}
                     className={`
-                      flex-shrink-0 px-2.5 py-1 rounded text-xs font-medium
-                      transition-all duration-200 whitespace-nowrap
+                      flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold
+                      transition-all duration-300 whitespace-nowrap font-sans
                       ${
                         isActive
-                          ? 'bg-gold-600 text-black shadow-sm shadow-gold-600/30'
-                          : 'bg-gold-600/8 text-gold-300/80 border border-gold-600/15 hover:bg-gold-600/20 hover:border-gold-600/30 hover:text-gold-200'
+                          ? 'bg-slate-900 text-white shadow-xl'
+                          : 'bg-warm-50 text-slate-700 hover:bg-warm-100 hover:text-tomato-600'
                       }
                     `}
+                    style={isActive ? {
+                      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25), 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)',
+                      backgroundColor: '#0F172A', // slate-900 - negro casi puro
+                      color: '#FFFFFF',
+                      fontWeight: 700,
+                    } : {
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    }}
                   >
                     {category.name}
                   </a>
@@ -114,7 +123,7 @@ export default function NavigationMenu({ categories, currentSlug }: NavigationMe
         </div>
       </div>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{__html: `
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -122,7 +131,7 @@ export default function NavigationMenu({ categories, currentSlug }: NavigationMe
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
-      `}</style>
+      `}} />
     </nav>
   );
 }

@@ -1,0 +1,24 @@
+# Archivos que NO se deben incluir en el deploy de Vercel
+
+# Archivos de desarrollo
+*.bat
+*.ps1
+run-dev.bat
+run-dev.ps1
+matar-*.bat
+verificar-*.bat
+verificar-*.ps1
+
+# Documentación excesiva (opcional, mantener si quieres)
+# *.md
+# !README.md
+# !DEPLOY.md
+
+# Archivos de servicio local (no necesarios en Vercel)
+servicio-impresion-local/
+
+# Archivos temporales
+*.tmp
+*.temp
+.cache/
+

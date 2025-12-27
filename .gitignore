@@ -39,6 +39,11 @@ Desktop.ini
 
 # Vercel
 .vercel
+.vercel/output
+
+# Build outputs
+dist/
+.output/
 
 # Temporary files
 *.tmp

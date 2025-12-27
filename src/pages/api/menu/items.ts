@@ -1,40 +1,41 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
-import { jsonResponse, errorResponse } from '../../../lib/api-helpers';
+import { MenuController } from '@backend/controllers/menu.controller';
+import { MenuService } from '@backend/services/menu.service';
 
 // GET - Obtener todos los items del menú
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request }) => {
   try {
-    const categoryId = url.searchParams.get('categoryId');
-    const availableOnly = url.searchParams.get('availableOnly') === 'true';
+    // Crear cliente de Supabase directamente desde las variables de entorno de Astro
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
     
-    let query = supabase
-      .from('menu_items')
-      .select(`
-        *,
-        category:categories(id, name, slug, is_active)
-      `)
-      .order('order_num', { ascending: true });
-    
-    if (categoryId) {
-      query = query.eq('category_id', parseInt(categoryId));
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('❌ Variables de entorno no configuradas');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Configuración incompleta' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Importar y crear cliente de Supabase
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Crear servicio y controller con el cliente
+    const menuService = new MenuService(supabaseClient);
+    const menuController = new MenuController(menuService);
+
+    // Llamar al controller
+    const result = await menuController.getMenuItems(request as any);
     
-    if (availableOnly) {
-      query = query.eq('is_available', true);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error obteniendo items:', error);
-      return errorResponse('Error al obtener items: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data: data || [] });
+    console.log('✅ GET menu/items - Respuesta:', result.status);
+    return result;
   } catch (error: any) {
-    console.error('Error en GET menu/items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    console.error('❌ Error en GET menu/items:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
