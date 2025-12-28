@@ -12,14 +12,15 @@ import { successResponse, errorResponse } from '../helpers/api-helpers';
 // En producción, esto debería estar en el backend o ser un servicio separado
 async function getPrinterService() {
   try {
-    // Ruta relativa desde backend a src/lib
-    const printerModule = await import('../../src/lib/printer-service');
+    // Ruta relativa desde backend/src/controllers a src/lib/printer-service
+    // Usar extensión .ts para que Vite/Rollup la resuelva correctamente
+    const printerModule = await import('../../src/lib/printer-service.ts');
     return {
       printKitchenCommand: printerModule.printKitchenCommand,
       printCustomerReceipt: printerModule.printCustomerReceipt,
     };
-  } catch (error) {
-    console.warn('[OrdersController] Printer service no disponible:', error);
+  } catch (error: any) {
+    console.warn('[OrdersController] Printer service no disponible:', error.message);
     return null;
   }
 }
