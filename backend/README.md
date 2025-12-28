@@ -80,3 +80,5 @@ Esta estructura está preparada para convertirse en un backend independiente (Ex
 2. Mapear las rutas a los controllers
 3. Mantener la misma lógica de negocio
 
+
+

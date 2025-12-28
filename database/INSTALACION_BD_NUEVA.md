@@ -162,3 +162,5 @@ Si encuentras algún error durante la instalación:
 2. Revisa los mensajes de error en el SQL Editor
 3. Asegúrate de tener permisos de administrador en Supabase
 
+
+

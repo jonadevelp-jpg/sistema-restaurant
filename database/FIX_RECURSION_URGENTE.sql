@@ -133,3 +133,5 @@ BEGIN
   RAISE NOTICE '🧪 Prueba: Recarga la página y verifica que el menú carga';
 END $$;
 
+
+

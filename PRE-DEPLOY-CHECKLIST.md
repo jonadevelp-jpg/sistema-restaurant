@@ -78,3 +78,5 @@ git status | grep .env
 
 **✅ Si todos los items están marcados, estás listo para deploy!**
 
+
+

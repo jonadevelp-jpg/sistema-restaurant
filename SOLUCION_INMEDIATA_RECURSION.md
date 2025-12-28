@@ -72,3 +72,5 @@ Después de ejecutar cualquiera de los scripts:
 3. **Ejecuta:** `database/VERIFICAR_MENU.sql` para ver el estado
 4. **Comparte el resultado** del script de verificación
 
+
+

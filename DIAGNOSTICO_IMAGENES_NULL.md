@@ -124,3 +124,5 @@ ORDER BY updated_at DESC;
 
 Si todos los logs muestran `hasImage: true` pero la imagen no se muestra, el problema está en el renderizado o en el cache busting.
 
+
+

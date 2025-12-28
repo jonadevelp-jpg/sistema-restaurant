@@ -98,3 +98,5 @@ Después de completar los pasos:
 
 **Crea el bucket desde el Dashboard de Supabase y ejecuta los scripts SQL. Las imágenes funcionarán correctamente.** 🎉
 
+
+

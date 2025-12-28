@@ -32,3 +32,5 @@ export function formatPrice(price: number): string {
   return formatCLP(price);
 }
 
+
+

@@ -22,3 +22,5 @@ BEGIN
   RAISE NOTICE '   para reactivar RLS con políticas correctas';
 END $$;
 
+
+

@@ -74,3 +74,5 @@ Luego actualiza TODAS las políticas RLS para usar estas funciones en lugar de c
 2. **Verifica que no hay errores en el SQL Editor de Supabase**
 3. **Comparte los mensajes de error de la consola del navegador**
 
+
+

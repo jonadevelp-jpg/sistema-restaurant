@@ -52,3 +52,5 @@ JOIN categories c ON mi.category_id = c.id
 WHERE c.slug = 'acompanamientos'
 ORDER BY mi.order_num;
 
+
+

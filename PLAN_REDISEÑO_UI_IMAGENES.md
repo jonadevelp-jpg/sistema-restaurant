@@ -102,3 +102,5 @@ Crear placeholders elegantes para:
 2. Helper para mapear rutas antiguas → nuevas
 3. Componente de preview mejorado en admin
 
+
+

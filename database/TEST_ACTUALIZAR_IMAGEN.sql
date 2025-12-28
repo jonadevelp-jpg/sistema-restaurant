@@ -24,3 +24,5 @@ WHERE id = 2;
 -- 4. Si funciona, entonces el problema está en el código de la aplicación
 -- Si NO funciona, entonces hay un problema con RLS o permisos
 
+
+

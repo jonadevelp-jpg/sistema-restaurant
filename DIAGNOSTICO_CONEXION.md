@@ -123,3 +123,5 @@ Deberías ver un objeto con `success: true` si todo está bien.
    - Ve a https://app.supabase.com
    - Verifica que tu proyecto no esté pausado
 
+
+

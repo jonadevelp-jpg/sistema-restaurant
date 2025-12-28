@@ -146,3 +146,5 @@ Después de crear el bucket:
 
 **Crea el bucket desde el Dashboard de Supabase y las imágenes funcionarán correctamente.** 🎉
 
+
+

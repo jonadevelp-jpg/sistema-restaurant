@@ -125,3 +125,5 @@ import { formatCLP, formatDate, distribuirPropinas } from '@/utils';
 - Las rutas API de Astro (`pages/api/`) actúan como proxy al backend Node.js
 - El frontend usa Supabase directamente solo para autenticación y algunas consultas públicas
 
+
+

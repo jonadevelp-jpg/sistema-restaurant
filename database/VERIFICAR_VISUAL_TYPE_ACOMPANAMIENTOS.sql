@@ -49,3 +49,5 @@ WHERE c.slug = 'acompanamientos'
 GROUP BY mi.visual_type
 ORDER BY mi.visual_type;
 
+
+

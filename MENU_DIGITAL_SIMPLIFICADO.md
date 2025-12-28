@@ -89,3 +89,5 @@ El menú ahora:
 - ✅ Se adapta al tipo de producto
 - ✅ Mantiene toda la funcionalidad
 
+
+

@@ -110,3 +110,5 @@ SELECT name, slug FROM categories WHERE is_active = false;
 
 ¡Listo! Ahora solo se mostrarán las categorías correctas en el menú digital y el navbar. 🎉
 
+
+

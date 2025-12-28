@@ -50,3 +50,5 @@ ORDER BY name;
 -- DELETE FROM categories 
 -- WHERE slug NOT IN ('destacados', 'completos', 'sandwiches', 'acompanamientos', 'pollo', 'bebidas');
 
+
+

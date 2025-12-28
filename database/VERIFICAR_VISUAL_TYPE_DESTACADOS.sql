@@ -42,3 +42,5 @@ FROM menu_items
 WHERE category_id = (SELECT id FROM categories WHERE slug = 'destacados')
 ORDER BY order_num;
 
+
+

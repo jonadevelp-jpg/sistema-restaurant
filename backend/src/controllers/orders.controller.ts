@@ -10,16 +10,35 @@ import { successResponse, errorResponse } from '../helpers/api-helpers';
 
 // Importación dinámica del printer-service (está en el frontend)
 // En producción, esto debería estar en el backend o ser un servicio separado
+// NOTA: En Vercel, el servicio de impresión no está disponible (solo funciona localmente)
 async function getPrinterService() {
+  // En producción (Vercel), el servicio de impresión no está disponible
+  // Solo funciona en servidor local con impresoras físicas
+  // Durante el build, siempre retornar null para evitar errores de resolución
+  const isVercel = typeof process !== 'undefined' && (process.env.VERCEL || process.env.VERCEL_ENV);
+  const isBuildTime = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'production';
+  
+  if (isVercel || isBuildTime) {
+    return null;
+  }
+
+  // Solo intentar importar en desarrollo local
+  // NOTA: Esta importación puede fallar durante el build, pero está envuelta en try-catch
   try {
-    // Ruta relativa desde backend a src/lib
-    const printerModule = await import('../../src/lib/printer-service');
+    // Usar import dinámico con ruta relativa
+    // Rollup puede intentar analizarla, pero el catch la manejará
+    const printerModule = await import('../../src/lib/printer-service').catch(() => null);
+    
+    if (!printerModule || !printerModule.printKitchenCommand || !printerModule.printCustomerReceipt) {
+      return null;
+    }
+    
     return {
       printKitchenCommand: printerModule.printKitchenCommand,
       printCustomerReceipt: printerModule.printCustomerReceipt,
     };
   } catch (error) {
-    console.warn('[OrdersController] Printer service no disponible:', error);
+    // Silenciar errores durante build - el servicio no está disponible en Vercel de todas formas
     return null;
   }
 }

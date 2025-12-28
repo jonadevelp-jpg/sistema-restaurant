@@ -91,3 +91,5 @@ Después de ejecutar los scripts, abre la consola del navegador (F12) y busca:
 
 3. **Verifica que tu proyecto de Supabase esté activo**
 
+
+

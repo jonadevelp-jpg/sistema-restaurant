@@ -45,3 +45,5 @@ WHERE role = 'admin';
 -- ¡LISTO! Ahora puedes iniciar sesión en /admin/login
 -- =====================================================
 
+
+

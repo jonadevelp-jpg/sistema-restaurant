@@ -136,3 +136,5 @@ Después de ejecutar cualquiera de los scripts:
 
 **💡 Recomendación:** Ejecuta primero `DESACTIVAR_RLS_ORDENES_TEMPORAL.sql` para que funcione inmediatamente, luego ejecuta `FIX_POLITICAS_ORDENES.sql` para una solución permanente.
 
+
+

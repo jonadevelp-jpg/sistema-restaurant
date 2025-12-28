@@ -135,3 +135,5 @@ Si ves este mensaje en la consola, las variables NO están configuradas:
 
 ¡Listo! Con estas variables configuradas, el sistema debería funcionar correctamente. 🎉
 
+
+

@@ -84,3 +84,5 @@ Si en el futuro se necesita un backend completamente independiente (Express, Fas
 
 La estructura actual ya está preparada para esto.
 
+
+

@@ -117,3 +117,5 @@ Si después de ejecutar el script SQL sigue sin funcionar:
 - Puedes ejecutarlo múltiples veces sin problemas
 - Si tienes dudas, revisa la consola del navegador (F12) para ver errores específicos
 
+
+

@@ -741,3 +741,5 @@ BEGIN
   RAISE NOTICE '   - visual_type: hero | list | drink';
 END $$;
 
+
+

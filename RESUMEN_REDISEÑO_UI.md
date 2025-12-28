@@ -117,3 +117,5 @@ Todos con:
 - ✅ Placeholders elegantes si falta imagen
 - ✅ No se rompió ninguna funcionalidad existente
 
+
+

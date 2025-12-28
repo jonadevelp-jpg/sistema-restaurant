@@ -187,3 +187,5 @@ export default defineConfig({
 
 ¡Con estos pasos deberías poder leer las variables de entorno en desarrollo! 🎉
 
+
+

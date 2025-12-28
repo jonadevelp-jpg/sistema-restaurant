@@ -132,3 +132,5 @@ Después de ejecutar el script:
 
 **Ejecuta el script SQL y recarga la página. El problema debería resolverse inmediatamente.** 🎉
 
+
+

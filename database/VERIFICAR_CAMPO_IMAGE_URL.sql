@@ -16,3 +16,5 @@ WHERE table_name = 'categories'
 -- Si el campo NO existe, ejecuta esto:
 -- ALTER TABLE categories ADD COLUMN image_url TEXT;
 
+
+

@@ -344,3 +344,5 @@ BEGIN
   RAISE NOTICE '🧪 Prueba: Intenta consultar categories o menu_items';
 END $$;
 
+
+

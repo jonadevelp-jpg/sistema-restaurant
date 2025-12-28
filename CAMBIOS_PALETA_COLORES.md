@@ -75,3 +75,5 @@ El sitio ahora tiene una apariencia fresca y moderna, apropiada para un restaura
 - Mejor legibilidad
 - Diseño más moderno y accesible
 
+
+

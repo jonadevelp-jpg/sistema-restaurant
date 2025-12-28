@@ -163,3 +163,5 @@ ORDER BY order_num;
 
 ¡Listo! Ahora deberías poder ingresar al panel y ver las categorías correctas. 🎉
 
+
+

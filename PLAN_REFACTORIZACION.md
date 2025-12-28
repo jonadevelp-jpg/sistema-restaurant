@@ -175,3 +175,5 @@ frontend/
 4. 🔄 Refactorizar frontend
 5. 🔄 Integrar y probar
 
+
+

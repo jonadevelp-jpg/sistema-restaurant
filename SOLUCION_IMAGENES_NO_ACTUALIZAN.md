@@ -160,3 +160,5 @@ O simplemente **espera 30 segundos** - el menú digital se actualizará automát
 
 **Las imágenes ahora deberían actualizarse correctamente con cache busting y auto-refresh.** 🎉
 
+
+

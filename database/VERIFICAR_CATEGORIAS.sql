@@ -88,3 +88,5 @@ WHERE slug NOT IN ('destacados', 'completos', 'sandwiches', 'acompanamientos', '
 -- Si NO ves estas categorías, ejecuta:
 -- database/SEED_MENU_COMPLETOS.sql
 
+
+

@@ -121,3 +121,5 @@ fetch('/api/test-supabase')
 
 3. **Verifica que tu proyecto de Supabase esté activo**
 
+
+

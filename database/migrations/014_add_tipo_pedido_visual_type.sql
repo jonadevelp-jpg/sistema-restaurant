@@ -124,3 +124,5 @@ BEGIN
   RAISE NOTICE '✅ Migración 014 completada exitosamente';
 END $$;
 
+
+
