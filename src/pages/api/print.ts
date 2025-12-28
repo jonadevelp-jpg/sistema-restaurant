@@ -81,7 +81,11 @@ export const POST: APIRoute = async (context) => {
     }
     
     try {
-      const url = printServiceUrl.endsWith('/') ? printServiceUrl.slice(0, -1) : printServiceUrl;
+      // El servicio local espera /print/kitchen o /print/receipt
+      const endpoint = type === 'kitchen' ? '/print/kitchen' : '/print/receipt';
+      const baseUrl = printServiceUrl.endsWith('/') ? printServiceUrl.slice(0, -1) : printServiceUrl;
+      const url = `${baseUrl}${endpoint}`;
+      
       console.log('[API Print] Enviando a servicio local:', url);
       console.log('[API Print] Tipo:', type);
       console.log('[API Print] Orden:', orden.numero_orden);
@@ -90,12 +94,11 @@ export const POST: APIRoute = async (context) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${printServiceToken}`,
         },
         body: JSON.stringify({
-          type: type === 'kitchen' ? 'kitchen' : 'receipt',
           orden,
           items,
+          token: printServiceToken, // El servicio local espera el token en el body
         }),
       });
       
