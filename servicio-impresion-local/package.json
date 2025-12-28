@@ -11,7 +11,8 @@
     "escpos": "^3.0.0-alpha.6",
     "escpos-usb": "*",
     "escpos-network": "*",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "@supabase/supabase-js": "^2.39.0"
   },
   "engines": {
     "node": ">=18.0.0"
