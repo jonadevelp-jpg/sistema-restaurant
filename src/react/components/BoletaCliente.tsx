@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface OrdenItem {
   id?: string;
@@ -34,6 +35,67 @@ interface BoletaClienteProps {
 
 export default function BoletaCliente({ orden, items, onClose }: BoletaClienteProps) {
   const printRef = useRef<HTMLDivElement>(null);
+  const [printing, setPrinting] = useState(false);
+
+  const handlePrintReceipt = async () => {
+    if (printing || !orden?.id) {
+      console.log('[BoletaCliente] handlePrintReceipt bloqueado:', { printing, ordenId: orden?.id });
+      return;
+    }
+    
+    console.log('[BoletaCliente] ========== INICIANDO IMPRESIÓN DE BOLETA ==========');
+    console.log('[BoletaCliente] Orden ID:', orden.id);
+    
+    setPrinting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      console.log('[BoletaCliente] Token de sesión:', token ? '✅ Presente' : '❌ Faltante');
+      
+      if (!token) {
+        alert('No estás autenticado. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+      
+      const requestBody = {
+        ordenId: orden.id,
+        type: 'receipt',
+        printerTarget: 'cashier',
+      };
+      
+      console.log('[BoletaCliente] Llamando a /api/print-jobs con:', requestBody);
+      
+      // Crear print_job en la cola de impresión
+      const response = await fetch('/api/print-jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('[BoletaCliente] Respuesta recibida:', response.status, response.statusText);
+      
+      const result = await response.json();
+      console.log('[BoletaCliente] Resultado:', result);
+      
+      if (response.ok && result.success) {
+        console.log('[BoletaCliente] ✅ Print job creado exitosamente');
+        alert('✅ Boleta enviada a la cola de impresión');
+      } else {
+        console.error('[BoletaCliente] ❌ Error en respuesta:', result);
+        alert(`❌ Error: ${result.error || result.message || 'No se pudo crear el trabajo de impresión'}`);
+      }
+    } catch (error: any) {
+      console.error('[BoletaCliente] ❌ Error enviando boleta:', error);
+      alert(`❌ Error al enviar boleta: ${error.message || 'Error desconocido'}`);
+    } finally {
+      setPrinting(false);
+      console.log('[BoletaCliente] ========== FIN IMPRESIÓN DE BOLETA ==========');
+    }
+  };
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -63,14 +125,17 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
     }, 250);
   };
 
-  useEffect(() => {
-    // Auto-imprimir cuando se monta el componente
-    const timer = setTimeout(() => {
-      handlePrint();
-    }, 500);
+  // COMENTADO: Auto-impresión deshabilitada
+  // La impresión ahora se maneja manualmente con el botón "Imprimir Boleta"
+  // o automáticamente cuando se paga la orden
+  // useEffect(() => {
+  //   // Auto-imprimir cuando se monta el componente
+  //   const timer = setTimeout(() => {
+  //     handlePrint();
+  //   }, 500);
 
-    return () => clearTimeout(timer);
-  }, []);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -125,7 +190,14 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           onClick={handlePrint}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          🖨️ Imprimir Boleta
+          🖨️ Vista Previa
+        </button>
+        <button
+          onClick={handlePrintReceipt}
+          disabled={printing}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {printing ? '⏳ Enviando...' : '📤 Imprimir Boleta'}
         </button>
         {onClose && (
           <button

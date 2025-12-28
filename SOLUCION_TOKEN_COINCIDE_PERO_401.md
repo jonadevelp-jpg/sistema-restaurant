@@ -120,3 +120,9 @@ module.exports = {
 
 **El problema es que el servicio no estaba cargando el `.env`. Con `dotenv` se soluciona.** ✅
 
+
+
+
+
+
+

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import KpiCard from './components/KpiCard';
-import { formatCLP } from '@/utils/currency';
-import { obtenerEstadisticasPropinas } from '@/utils/tips';
+import { formatCLP } from '@/frontend/utils/currency';
+import { obtenerEstadisticasPropinas } from '@/backend/services/tips.service';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -183,57 +183,37 @@ export default function Dashboard() {
         </div>
 
         {/* KPIs de Propinas */}
-        <div 
-          className="bg-white rounded-2xl p-6 mb-8"
-          style={{
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
-          }}
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-slate-900 font-sans">Propinas</h2>
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base sm:text-lg font-semibold">Propinas</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => setPeriodoPropinas('semana')}
-                className={`px-4 py-2 text-sm rounded-xl font-medium font-sans transition-all duration-200 ${
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
                   periodoPropinas === 'semana'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-warm-100 text-slate-700 hover:bg-warm-200'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
-                style={
-                  periodoPropinas === 'semana'
-                    ? { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)' }
-                    : {}
-                }
               >
                 Semana
               </button>
               <button
                 onClick={() => setPeriodoPropinas('quincena')}
-                className={`px-4 py-2 text-sm rounded-xl font-medium font-sans transition-all duration-200 ${
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
                   periodoPropinas === 'quincena'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-warm-100 text-slate-700 hover:bg-warm-200'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
-                style={
-                  periodoPropinas === 'quincena'
-                    ? { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)' }
-                    : {}
-                }
               >
                 Quincena
               </button>
               <button
                 onClick={() => setPeriodoPropinas('mes')}
-                className={`px-4 py-2 text-sm rounded-xl font-medium font-sans transition-all duration-200 ${
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
                   periodoPropinas === 'mes'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-warm-100 text-slate-700 hover:bg-warm-200'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
-                style={
-                  periodoPropinas === 'mes'
-                    ? { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)' }
-                    : {}
-                }
               >
                 Mes
               </button>
@@ -253,24 +233,21 @@ export default function Dashboard() {
               <h3 className="text-sm font-semibold text-slate-700 mb-3">
                 Distribución por Empleado
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {propinasStats.porEmpleado.map((item, index) => (
                   <div
                     key={index}
-                    className="flex justify-between items-center p-4 bg-warm-50 rounded-xl"
-                    style={{
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                    }}
+                    className="flex justify-between items-center p-3 bg-slate-50 rounded-lg"
                   >
                     <div>
-                      <div className="font-semibold text-slate-900 font-sans">
+                      <div className="font-medium text-slate-900">
                         {item.empleado?.nombre || 'Sin nombre'}
                       </div>
-                      <div className="text-sm text-slate-600 font-sans mt-1">
+                      <div className="text-xs text-slate-600">
                         {item.empleado?.funcion || 'Sin función'}
                       </div>
                     </div>
-                    <div className="text-xl font-bold text-slate-900 font-sans">
+                    <div className="text-lg font-semibold text-slate-900">
                       {formatCLP(item.total)}
                     </div>
                   </div>
@@ -284,108 +261,81 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div 
-            className="bg-white rounded-2xl p-6"
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
-            }}
-          >
-            <h2 className="text-lg font-bold text-slate-900 mb-6 font-sans">Accesos Rápidos</h2>
-            <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Accesos Rápidos</h2>
+            <div className="space-y-2 sm:space-y-3">
               <a
                 href="/admin/mesas"
-                className="block p-4 rounded-xl hover:bg-warm-50 transition-all duration-200 group"
-                style={{
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                }}
+                className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl group-hover:scale-110 transition-transform duration-200">🪑</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl">🪑</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-base text-slate-900 font-sans">Pedidos (POS)</div>
-                    <div className="text-sm text-slate-600 font-sans mt-1">Gestionar pedidos y crear órdenes</div>
+                    <div className="font-semibold text-sm sm:text-base">Mesas (POS)</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Gestionar mesas y crear órdenes</div>
                   </div>
                 </div>
               </a>
               <a
                 href="/admin/stock"
-                className="block p-4 rounded-xl hover:bg-warm-50 transition-all duration-200 group"
-                style={{
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                }}
+                className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl group-hover:scale-110 transition-transform duration-200">📦</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl">📦</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-base text-slate-900 font-sans">Gestión de Stock</div>
-                    <div className="text-sm text-slate-600 font-sans mt-1">Ver y ajustar inventario</div>
+                    <div className="font-semibold text-sm sm:text-base">Gestión de Stock</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Ver y ajustar inventario</div>
                   </div>
                 </div>
               </a>
               <a
                 href="/admin/ingredientes"
-                className="block p-4 rounded-xl hover:bg-warm-50 transition-all duration-200 group"
-                style={{
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                }}
+                className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl group-hover:scale-110 transition-transform duration-200">🥕</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-xl sm:text-2xl">🥕</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-base text-slate-900 font-sans">Ingredientes</div>
-                    <div className="text-sm text-slate-600 font-sans mt-1">Administrar ingredientes</div>
+                    <div className="font-semibold text-sm sm:text-base">Ingredientes</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Administrar ingredientes</div>
                   </div>
                 </div>
               </a>
             </div>
           </div>
 
-          <div 
-            className="bg-white rounded-2xl p-6"
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
-            }}
-          >
-            <h2 className="text-lg font-bold text-slate-900 mb-6 font-sans">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
               Alertas de Stock
               {stockBajo.length > 0 && (
-                <span 
-                  className="ml-2 px-3 py-1 bg-tomato-50 text-tomato-700 rounded-full text-xs font-semibold"
-                  style={{
-                    boxShadow: '0 1px 3px rgba(255, 68, 68, 0.2)',
-                  }}
-                >
+                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
                   {stockBajo.length}
                 </span>
               )}
             </h2>
             {stockBajo.length === 0 ? (
-              <div className="text-sm text-green-600 font-sans">
+              <div className="text-xs sm:text-sm text-green-600">
                 ✅ Todo el stock está en niveles adecuados
               </div>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 {stockBajo.map((ing) => (
                   <div
                     key={ing.id}
-                    className="p-4 bg-orange-50 rounded-xl border border-orange-100"
-                    style={{
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                    }}
+                    className="p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-orange-900 font-sans">
+                        <div className="font-semibold text-xs sm:text-sm text-yellow-900">
                           ⚠️ {ing.nombre}
                         </div>
-                        <div className="text-xs text-orange-700 mt-1 font-sans">
+                        <div className="text-xs text-yellow-700 mt-1">
                           Stock: {ing.stock_actual} {ing.unidad_medida} / Mínimo: {ing.stock_minimo} {ing.unidad_medida}
                         </div>
                       </div>
                       <a
                         href="/admin/stock"
-                        className="ml-2 text-xs text-orange-700 hover:text-orange-900 underline flex-shrink-0 font-medium font-sans"
+                        className="ml-2 text-xs text-yellow-800 hover:text-yellow-900 underline flex-shrink-0"
                       >
                         Ver
                       </a>

@@ -175,3 +175,9 @@ Este script verifica:
 
 **Recuerda: La impresión automática se activa al cambiar el ESTADO, no con los botones de imprimir.** ✅
 
+
+
+
+
+
+

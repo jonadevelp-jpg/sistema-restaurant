@@ -1,33 +1,18 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import OrdenForm from '../../../react/components/OrdenForm';
+import OrdenForm from '../../../frontend/components/admin/OrdenForm';
+import type { APIContext } from 'astro';
+
+export async function getStaticPaths() {
+  return [];
+}
 
 const { id } = Astro.params;
 const ordenId = id || '';
 ---
 
-<AdminLayout title={`Orden ${ordenId}`}>
-  <div id="orden-form-container">
-    <OrdenForm ordenId={ordenId} client:load />
-  </div>
-  
-  <script>
-    // Fallback si el componente no carga
-    setTimeout(() => {
-      const container = document.getElementById('orden-form-container');
-      if (container && container.children.length === 0) {
-        container.innerHTML = `
-          <div class="p-6 bg-yellow-50 border border-yellow-200 rounded-xl">
-            <h2 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Error cargando orden</h2>
-            <p class="text-yellow-700 mb-4">El componente de orden no se cargó correctamente.</p>
-            <button onclick="window.location.reload()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
-              Recargar página
-            </button>
-          </div>
-        `;
-      }
-    }, 3000);
-  </script>
+<AdminLayout title="Orden">
+  <OrdenForm ordenId={ordenId} client:only="react" />
 </AdminLayout>
 
 

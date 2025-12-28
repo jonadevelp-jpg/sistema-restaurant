@@ -157,3 +157,9 @@ Este script verifica:
 
 **He mejorado el logging del servicio local para que muestre más detalles. Reinicia el servicio y prueba de nuevo.** 🔄
 
+
+
+
+
+
+

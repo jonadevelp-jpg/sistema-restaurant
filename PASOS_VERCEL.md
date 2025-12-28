@@ -149,3 +149,9 @@ PRINT_SERVICE_TOKEN=TU_TOKEN_DEL_ARCHIVO_ENV
 
 **¡Después de esto, debería funcionar desde cualquier dispositivo!** 🎉
 
+
+
+
+
+
+

@@ -159,3 +159,9 @@ Deberías ver:
 
 **¡La impresión automática se activa al cambiar el estado, no con los botones de imprimir!** ✅
 
+
+
+
+
+
+

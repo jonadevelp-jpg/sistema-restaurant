@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { formatCLP } from '@/utils/currency';
-import { distribuirPropinas } from '@/utils/tips';
-import type { TipoPedido } from '@/@types';
+import { formatCLP } from '@/lib/currency';
+import { distribuirPropinas } from '@/lib/tips';
 import ComandaCocina from './ComandaCocina';
 import BoletaCliente from './BoletaCliente';
 import ItemPersonalizationModal from './ItemPersonalizationModal';
@@ -29,8 +28,7 @@ interface OrdenItem {
 interface Orden {
   id: string;
   numero_orden: string;
-  tipo_pedido: TipoPedido;
-  mesa_id?: string | null; // Mantener para compatibilidad con órdenes antiguas
+  mesa_id: string;
   estado: string;
   total: number;
   nota?: string;
@@ -46,13 +44,13 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<Array<{ id: number; name: string; slug: string }>>([]);
   const [showCategories, setShowCategories] = useState(true); // Mostrar categorías o items
   const [searchQuery, setSearchQuery] = useState<string>(''); // Búsqueda de items
   const [showComanda, setShowComanda] = useState(false);
   const [showBoleta, setShowBoleta] = useState(false);
+  const [mesaInfo, setMesaInfo] = useState<{ numero: number } | null>(null);
   const [showPersonalizationModal, setShowPersonalizationModal] = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [showPagoModal, setShowPagoModal] = useState(false);
@@ -92,39 +90,28 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
     try {
       setLoading(true);
-      // Cargar orden (sin necesidad de mesa)
+      // Cargar orden con información de mesa
       const { data: ordenData, error: ordenError } = await supabase
         .from('ordenes_restaurante')
-        .select('*')
+        .select('*, mesas(numero)')
         .eq('id', ordenId)
         .single();
 
       if (ordenError) {
         console.error('Error cargando orden:', ordenError);
-        console.error('Detalles del error:', {
-          message: ordenError.message,
-          code: ordenError.code,
-          details: ordenError.details,
-          hint: ordenError.hint
-        });
-        
-        // Detectar recursión infinita específicamente
-        if (ordenError.message?.includes('infinite recursion') || ordenError.code === '42P17') {
-          setError('❌ Error de recursión infinita en políticas RLS. Ejecuta el script SQL: database/SOLUCION_INMEDIATA_FINAL.sql en Supabase SQL Editor.');
-        } else {
-          setError(`Error cargando orden: ${ordenError.message} (Código: ${ordenError.code || 'N/A'})`);
-        }
         setLoading(false);
         return;
       }
 
       if (!ordenData) {
-        setError('Orden no encontrada. Verifica que el ID de la orden sea correcto.');
         setLoading(false);
         return;
       }
 
       setOrden(ordenData);
+      if (ordenData.mesas) {
+        setMesaInfo(ordenData.mesas);
+      }
 
       // Cargar items de la orden
       const { data: itemsData, error: itemsError } = await supabase
@@ -222,7 +209,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       if (menuData) setMenuItems(menuData);
     } catch (error: any) {
       console.error('Error cargando datos:', error);
-      setError(`Error inesperado: ${error.message || 'Error desconocido'}`);
+      alert('Error cargando orden: ' + (error.message || 'Error desconocido'));
     } finally {
       setLoading(false);
     }
@@ -403,6 +390,9 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     try {
       setSaving(true);
       
+      // Guardar el mesa_id antes de eliminar la orden
+      const mesaId = orden?.mesa_id;
+      
       // Eliminar todos los items de la orden
       if (items.length > 0) {
         const { error: itemsError } = await supabase
@@ -410,24 +400,52 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           .delete()
           .eq('orden_id', ordenId);
 
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('[cancelarOrden] Error eliminando items:', itemsError);
+          throw itemsError;
+        }
       }
 
-      // Ya no necesitamos liberar mesa (sistema sin mesas)
-
-      // Eliminar la orden
-      const { error } = await supabase
+      // Eliminar la orden primero
+      const { error: deleteError } = await supabase
         .from('ordenes_restaurante')
         .delete()
         .eq('id', ordenId);
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('[cancelarOrden] Error eliminando orden:', deleteError);
+        throw deleteError;
+      }
+
+      // Liberar la mesa DESPUÉS de eliminar la orden (para evitar conflictos)
+      if (mesaId) {
+        console.log(`[cancelarOrden] Intentando liberar mesa ${mesaId}...`);
+        
+        const { data: mesaData, error: mesaError } = await supabase
+          .from('mesas')
+          .update({ estado: 'libre' })
+          .eq('id', mesaId)
+          .select()
+          .single();
+
+        if (mesaError) {
+          console.error('[cancelarOrden] Error liberando mesa:', mesaError);
+          console.error('[cancelarOrden] Detalles del error:', JSON.stringify(mesaError, null, 2));
+          alert(`⚠️ Orden cancelada, pero hubo un problema al liberar la mesa: ${mesaError.message}. Por favor, libérala manualmente.`);
+        } else if (mesaData) {
+          console.log(`[cancelarOrden] ✅ Mesa ${mesaId} (Mesa ${mesaData.numero}) liberada correctamente. Estado actual: ${mesaData.estado}`);
+        } else {
+          console.warn(`[cancelarOrden] ⚠️ Mesa ${mesaId} no se encontró o no se actualizó`);
+        }
+      } else {
+        console.log('[cancelarOrden] Orden sin mesa asignada, no se necesita liberar');
+      }
 
       // Redirigir a mesas
       window.location.href = '/admin/mesas';
     } catch (error: any) {
+      console.error('[cancelarOrden] Error general:', error);
       alert('Error cancelando orden: ' + error.message);
-    } finally {
       setSaving(false);
     }
   }
@@ -439,6 +457,19 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       return;
     }
 
+    // Validar que el estado actual permita el cambio
+    if (!orden) {
+      alert('Error: No se pudo cargar la orden. Recarga la página.');
+      return;
+    }
+
+    console.log('[OrdenForm] ========== INICIANDO CAMBIO DE ESTADO ==========');
+    console.log('[OrdenForm] Estado actual:', orden.estado);
+    console.log('[OrdenForm] Estado nuevo:', nuevoEstado);
+    console.log('[OrdenForm] Orden ID:', ordenId);
+    console.log('[OrdenForm] Items en orden:', items.length);
+    console.log('[OrdenForm] Saving:', saving);
+
     try {
       setSaving(true);
       
@@ -448,7 +479,10 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         const token = session?.access_token;
         
         if (token) {
+          console.log('[OrdenForm] ✅ Token de sesión encontrado');
           console.log('[OrdenForm] Llamando a API route para cambiar estado:', nuevoEstado);
+          console.log('[OrdenForm] URL:', `/api/ordenes/${ordenId}`);
+          
           const response = await fetch(`/api/ordenes/${ordenId}`, {
             method: 'PATCH',
             headers: {
@@ -458,39 +492,76 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
             body: JSON.stringify({ estado: nuevoEstado }),
           });
           
+          console.log('[OrdenForm] Respuesta recibida:', response.status, response.statusText);
+          
           if (response.ok) {
             const result = await response.json();
-            console.log('[OrdenForm] API route respondió correctamente:', result);
+            console.log('[OrdenForm] ✅ API route respondió correctamente:', result);
             // API route funcionó, recargar datos
             await loadData();
+            console.log('[OrdenForm] ✅ Datos recargados después de cambio de estado');
             return;
           } else {
             const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
-            console.error('[OrdenForm] API route falló:', response.status, errorData);
+            console.error('[OrdenForm] ❌ API route falló:', response.status, errorData);
+            alert(`Error del servidor (${response.status}): ${errorData.error || errorData.message || 'Error desconocido'}`);
             // Continuar con fallback
           }
         } else {
-          console.warn('[OrdenForm] No hay token de sesión, usando método directo');
+          console.warn('[OrdenForm] ⚠️ No hay token de sesión, usando método directo');
         }
       } catch (apiError: any) {
         // Si la API falla, usar método directo como fallback
-        console.warn('[OrdenForm] API route no disponible, usando método directo:', apiError.message);
+        console.warn('[OrdenForm] ⚠️ API route no disponible, usando método directo:', apiError.message);
+        console.error('[OrdenForm] Error completo:', apiError);
       }
       
       // Fallback: actualizar directamente (método original)
       console.log('[OrdenForm] Usando método directo (fallback)');
-      const { error } = await supabase
+      console.log('[OrdenForm] Actualizando orden:', ordenId, 'a estado:', nuevoEstado);
+      
+      const { data, error } = await supabase
         .from('ordenes_restaurante')
         .update({ estado: nuevoEstado })
-        .eq('id', ordenId);
+        .eq('id', ordenId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[OrdenForm] ❌ Error de Supabase:', error);
+        console.error('[OrdenForm] Código:', error.code);
+        console.error('[OrdenForm] Mensaje:', error.message);
+        console.error('[OrdenForm] Detalles:', error.details);
+        console.error('[OrdenForm] Hint:', error.hint);
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        console.log('[OrdenForm] ✅ Estado actualizado correctamente:', data[0]);
+      } else {
+        console.warn('[OrdenForm] ⚠️ No se devolvieron datos después de actualizar');
+      }
+      
       await loadData();
+      console.log('[OrdenForm] ✅ Datos recargados después de cambio de estado (método directo)');
     } catch (error: any) {
-      console.error('[OrdenForm] Error actualizando estado:', error);
-      alert('Error actualizando estado: ' + error.message);
+      console.error('[OrdenForm] ❌ ========== ERROR ACTUALIZANDO ESTADO ==========');
+      console.error('[OrdenForm] Error completo:', error);
+      console.error('[OrdenForm] Tipo:', typeof error);
+      console.error('[OrdenForm] Stack:', error.stack);
+      
+      let errorMessage = 'Error desconocido';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.error) {
+        errorMessage = error.error;
+      }
+      
+      alert(`Error actualizando estado: ${errorMessage}\n\nRevisa la consola (F12) para más detalles.`);
     } finally {
       setSaving(false);
+      console.log('[OrdenForm] ========== FIN CAMBIO DE ESTADO ==========');
     }
   }
 
@@ -600,9 +671,47 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         }
       }
 
-      // Ya no necesitamos liberar mesa (sistema sin mesas)
+      // Liberar mesa
+      if (orden?.mesa_id) {
+        await supabase
+          .from('mesas')
+          .update({ estado: 'libre' })
+          .eq('id', orden.mesa_id);
+      }
 
       setShowPagoModal(false);
+      
+      // Crear print_job para boleta automáticamente al pagar
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        
+        if (token) {
+          // Crear print_job en la cola de impresión
+          const printResponse = await fetch('/api/print-jobs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              ordenId: ordenId,
+              type: 'payment',
+              printerTarget: 'cashier',
+            }),
+          });
+          
+          if (printResponse.ok) {
+            console.log('[OrdenForm] ✅ Trabajo de impresión de boleta creado automáticamente al pagar');
+          } else {
+            console.warn('[OrdenForm] ⚠️ No se pudo crear el trabajo de impresión, pero el pago fue exitoso');
+          }
+        }
+      } catch (printError) {
+        console.error('[OrdenForm] Error creando trabajo de impresión:', printError);
+        // No bloquear el flujo si falla la creación del print_job
+      }
+      
       // Mostrar boleta antes de redirigir
       setShowBoleta(true);
     } catch (error: any) {
@@ -695,83 +804,26 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-warm-200 border-t-slate-600"></div>
-        <div className="text-slate-600 text-lg font-sans">Cargando orden...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div 
-        className="p-6 bg-red-50 rounded-2xl"
-        style={{
-          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15), 0 1px 3px rgba(239, 68, 68, 0.1)',
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <span className="text-red-600 text-2xl">⚠️</span>
-          <div className="flex-1">
-            <h2 className="text-red-900 font-bold text-lg mb-2 font-sans">Error</h2>
-            <p className="text-red-700 mb-4 whitespace-pre-line font-sans">{error}</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setError(null);
-                  loadData();
-                }}
-                className="px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold font-sans transition-all duration-200"
-                style={{
-                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)',
-                }}
-              >
-                Reintentar
-              </button>
-              <a
-                href="/admin/mesas"
-                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 font-semibold font-sans inline-block transition-all duration-200"
-                style={{
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
-                }}
-              >
-                Volver a Pedidos
-              </a>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-slate-600">Cargando orden...</div>
       </div>
     );
   }
 
   if (!ordenId) {
     return (
-      <div 
-        className="p-6 bg-orange-50 rounded-2xl"
-        style={{
-          boxShadow: '0 2px 8px rgba(249, 115, 22, 0.15), 0 1px 3px rgba(249, 115, 22, 0.1)',
-        }}
-      >
-        <div className="text-orange-900 font-bold mb-2 font-sans">Error: No se proporcionó un ID de orden</div>
-        <a href="/admin/mesas" className="text-blue-600 hover:text-blue-800 mt-2 inline-block font-semibold font-sans">
-          Volver a Pedidos
-        </a>
+      <div className="p-6">
+        <div className="text-red-600">Error: No se proporcionó un ID de orden</div>
       </div>
     );
   }
 
   if (!orden) {
     return (
-      <div 
-        className="p-6 bg-orange-50 rounded-2xl"
-        style={{
-          boxShadow: '0 2px 8px rgba(249, 115, 22, 0.15), 0 1px 3px rgba(249, 115, 22, 0.1)',
-        }}
-      >
-        <div className="text-orange-900 font-bold mb-2 font-sans">Orden no encontrada</div>
-        <p className="text-orange-700 text-sm mb-4 font-sans">La orden con ID "{ordenId}" no existe o no tienes permisos para verla.</p>
-        <a href="/admin/mesas" className="text-blue-600 hover:text-blue-800 mt-2 inline-block font-semibold font-sans">
-          ← Volver a Pedidos
+      <div className="p-6">
+        <div className="text-red-600">Orden no encontrada</div>
+        <a href="/admin/mesas" className="text-blue-600 hover:underline mt-2 inline-block">
+          Volver a Mesas
         </a>
       </div>
     );
@@ -780,25 +832,19 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
   return (
     <div className="pb-4 sm:pb-6">
       {/* Header sticky para móvil */}
-      <div 
-        className="sticky top-0 z-40 bg-white mb-6 -mx-2 sm:-mx-4 lg:-mx-6 px-2 sm:px-4 lg:px-6 py-4 sm:py-6"
-        style={{
-          borderBottom: '1px solid #E5E7EB',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)',
-        }}
-      >
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm mb-4 sm:mb-6 -mx-2 sm:-mx-4 lg:-mx-6 px-2 sm:px-4 lg:px-6 py-3 sm:py-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate font-sans">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">
               Orden: {orden.numero_orden}
             </h1>
-            {orden.tipo_pedido && (
-              <p className="text-base sm:text-lg text-slate-600 mt-2 font-sans">
-                {orden.tipo_pedido === 'barra' ? '🪑 Consumir en Barra' : '📦 Para Llevar'}
+            {mesaInfo && (
+              <p className="text-sm sm:text-base text-slate-600 mt-1">
+                Mesa {mesaInfo.numero}
               </p>
             )}
-            <p className="text-sm text-slate-600 mt-1 font-sans">
-              Estado: <span className="font-bold capitalize">{orden.estado}</span>
+            <p className="text-xs sm:text-sm text-slate-600 mt-1">
+              Estado: <span className="font-semibold capitalize">{orden.estado}</span>
             </p>
           </div>
           
@@ -809,10 +855,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 onClick={() => updateEstado('preparing')}
                 disabled={orden.estado !== 'pending' || saving || items.length === 0}
                 aria-label="Marcar orden en preparación"
-                className="min-h-[48px] min-w-[120px] px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold font-sans transition-all duration-200 whitespace-nowrap"
-                style={{
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3), 0 2px 4px rgba(249, 115, 22, 0.2)',
-                }}
+                className="min-h-[48px] min-w-[120px] px-4 py-3 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 active:bg-yellow-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-300 transition-all whitespace-nowrap"
               >
                 ⏳ Preparación
               </button>
@@ -820,10 +863,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 onClick={() => updateEstado('ready')}
                 disabled={orden.estado !== 'preparing' || saving || items.length === 0}
                 aria-label="Marcar orden como lista"
-                className="min-h-[48px] min-w-[100px] px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold font-sans transition-all duration-200 whitespace-nowrap"
-                style={{
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3), 0 2px 4px rgba(37, 99, 235, 0.2)',
-                }}
+                className="min-h-[48px] min-w-[100px] px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all whitespace-nowrap"
               >
                 ✅ Lista
               </button>
@@ -831,10 +871,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 onClick={() => setShowComanda(true)}
                 disabled={items.length === 0}
                 aria-label="Imprimir comanda de cocina"
-                className="min-h-[48px] min-w-[140px] px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold font-sans transition-all duration-200 whitespace-nowrap"
-                style={{
-                  boxShadow: '0 4px 12px rgba(147, 51, 234, 0.3), 0 2px 4px rgba(147, 51, 234, 0.2)',
-                }}
+                className="min-h-[48px] min-w-[140px] px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 active:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all whitespace-nowrap"
               >
                 🖨️ Comanda
               </button>
@@ -842,10 +879,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 onClick={() => setShowBoleta(true)}
                 disabled={items.length === 0}
                 aria-label="Imprimir boleta de cliente"
-                className="min-h-[48px] min-w-[130px] px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold font-sans transition-all duration-200 whitespace-nowrap"
-                style={{
-                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3), 0 2px 4px rgba(99, 102, 241, 0.2)',
-                }}
+                className="min-h-[48px] min-w-[130px] px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all whitespace-nowrap"
               >
                 🧾 Boleta
               </button>
@@ -853,10 +887,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 onClick={pagarOrden}
                 disabled={orden.estado === 'paid' || saving || items.length === 0}
                 aria-label="Pagar orden"
-                className="min-h-[48px] min-w-[100px] px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold font-sans transition-all duration-200 whitespace-nowrap"
-                style={{
-                  boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(22, 163, 74, 0.2)',
-                }}
+                className="min-h-[48px] min-w-[100px] px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-green-300 transition-all whitespace-nowrap"
               >
                 💰 Pagar
               </button>
@@ -865,10 +896,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                   onClick={cancelarOrden}
                   disabled={saving}
                   aria-label="Cancelar y eliminar orden"
-                  className="min-h-[48px] min-w-[140px] px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold font-sans transition-all duration-200 whitespace-nowrap"
-                  style={{
-                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3), 0 2px 4px rgba(220, 38, 38, 0.2)',
-                  }}
+                  className="min-h-[48px] min-w-[140px] px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 active:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-red-300 transition-all whitespace-nowrap"
                 >
                   ❌ Cancelar Orden
                 </button>
@@ -881,24 +909,16 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Menú de items */}
         <div className="lg:col-span-2 order-2 lg:order-1">
-          <div 
-            className="bg-white rounded-2xl p-6"
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-900 font-sans">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
                 {showCategories ? 'Seleccionar Categoría' : 'Agregar Items'}
               </h2>
               {!showCategories && (
                 <button
                   onClick={handleBackToCategories}
                   aria-label="Volver a categorías"
-                  className="min-h-[44px] px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 active:scale-[0.98] text-sm font-bold font-sans transition-all duration-200"
-                  style={{
-                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
-                  }}
+                  className="min-h-[44px] px-4 py-2 bg-slate-600 text-white rounded-xl hover:bg-slate-700 active:bg-slate-800 text-sm sm:text-base font-semibold focus:outline-none focus:ring-4 focus:ring-slate-300 transition-all"
                 >
                   ← Volver
                 </button>
@@ -1048,10 +1068,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                     placeholder="Buscar items (ej: papas fritas, arroz, etc.)"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full min-h-[48px] px-4 py-3 border border-warm-200 rounded-xl text-base focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 font-sans transition-all duration-200"
-                    style={{
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                    }}
+                    className="w-full min-h-[48px] px-4 py-3 border-2 border-slate-300 rounded-xl text-base focus:outline-none focus:ring-4 focus:ring-slate-300 focus:border-slate-500"
                   />
                   {searchQuery && (
                     <button
@@ -1170,13 +1187,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
         {/* Resumen de orden - Sticky en móvil también */}
         <div className="lg:col-span-1 order-1 lg:order-2">
-          <div 
-            className="bg-white rounded-2xl p-6 sticky top-[120px] sm:top-6 max-h-[calc(100vh-140px)] sm:max-h-[calc(100vh-40px)] flex flex-col"
-            style={{
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
-            }}
-          >
-            <h2 className="text-xl font-bold mb-6 text-slate-900 font-sans">Resumen de Orden</h2>
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 sticky top-[120px] sm:top-6 max-h-[calc(100vh-140px)] sm:max-h-[calc(100vh-40px)] flex flex-col">
+            <h2 className="text-lg sm:text-xl font-bold mb-4 text-slate-900">Resumen de Orden</h2>
 
             <div className="space-y-3 mb-4 flex-1 overflow-y-auto overscroll-contain min-h-0">
               {items.length === 0 ? (
@@ -1185,10 +1197,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 items.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-xl bg-white hover:bg-warm-50 transition-all duration-200 overflow-hidden"
-                    style={{
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
-                    }}
+                    className="border-2 border-slate-300 rounded-xl bg-white hover:border-slate-400 hover:shadow-md transition-all overflow-hidden"
                   >
                     {/* Imagen del item si existe */}
                     {item.menu_item?.image_url && (
@@ -1283,15 +1292,10 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
               )}
             </div>
 
-            <div 
-              className="border-t border-warm-200 pt-6 mt-auto"
-              style={{
-                borderTopWidth: '2px',
-              }}
-            >
-              <div className="flex justify-between items-center text-xl font-bold text-slate-900 font-sans">
+            <div className="border-t-2 border-slate-400 pt-4 mt-auto">
+              <div className="flex justify-between items-center text-lg sm:text-xl font-bold text-slate-900">
                 <span>Total:</span>
-                <span className="text-green-700 text-2xl" aria-label={`Total de la orden: ${formatCLP(orden.total)}`}>
+                <span className="text-green-700" aria-label={`Total de la orden: ${formatCLP(orden.total)}`}>
                   {formatCLP(orden.total)}
                 </span>
               </div>
@@ -1303,23 +1307,14 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       {/* Modal de Comanda Cocina */}
       {showComanda && orden && (
         <div 
-          className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4 no-print"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-          }}
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4 no-print"
           role="dialog"
           aria-modal="true"
           aria-label="Comanda de cocina"
         >
-          <div 
-            className="bg-white rounded-2xl max-w-md w-full max-h-[95vh] overflow-y-auto"
-            style={{
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.2)',
-            }}
-          >
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[95vh] overflow-y-auto shadow-2xl">
             <ComandaCocina
-              orden={orden}
+              orden={{ ...orden, mesas: mesaInfo || undefined }}
               items={items}
               onClose={() => setShowComanda(false)}
             />
@@ -1330,23 +1325,14 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       {/* Modal de Boleta Cliente */}
       {showBoleta && orden && (
         <div 
-          className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4 no-print"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-          }}
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4 no-print"
           role="dialog"
           aria-modal="true"
           aria-label="Boleta de cliente"
         >
-          <div 
-            className="bg-white rounded-2xl max-w-md w-full max-h-[95vh] overflow-y-auto"
-            style={{
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.2)',
-            }}
-          >
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[95vh] overflow-y-auto shadow-2xl">
             <BoletaCliente
-              orden={orden}
+              orden={{ ...orden, mesas: mesaInfo || undefined }}
               items={items}
               onClose={() => {
                 setShowBoleta(false);
@@ -1406,11 +1392,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       {/* Modal de Pago */}
       {showPagoModal && (
         <div 
-          className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-          }}
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
           onClick={() => {
             if (!saving) {
               setShowPagoModal(false);
@@ -1422,27 +1404,21 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           aria-labelledby="pago-title"
         >
           <div 
-            className="bg-white rounded-2xl p-8 max-w-md w-full"
+            className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.2)',
-            }}
           >
-            <h2 id="pago-title" className="text-2xl font-bold mb-6 text-slate-900 font-sans">
+            <h2 id="pago-title" className="text-xl sm:text-2xl font-bold mb-6 text-slate-900">
               Pagar Orden
             </h2>
             
             <div className="mb-6">
-              <label htmlFor="metodoPago" className="block text-base font-semibold mb-3 text-slate-700 font-sans">
+              <label htmlFor="metodoPago" className="block text-base sm:text-lg font-semibold mb-3 text-slate-700">
                 Método de Pago:
               </label>
               <select
                 id="metodoPago"
                 aria-label="Seleccionar método de pago"
-                className="w-full min-h-[56px] px-4 py-3 text-base border border-warm-200 rounded-xl focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 font-sans transition-all duration-200"
-                style={{
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                }}
+                className="w-full min-h-[56px] px-4 py-3 text-base sm:text-lg border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-green-300 focus:border-green-500"
                 defaultValue=""
               >
                 <option value="">Selecciona método de pago</option>
@@ -1452,29 +1428,19 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
               </select>
             </div>
 
-            <div 
-              className="mb-6 p-5 bg-warm-50 rounded-xl"
-              style={{
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-              }}
-            >
-              <div className="space-y-3">
-                <div className="flex justify-between text-base">
-                  <span className="font-medium text-slate-700 font-sans">Subtotal:</span>
-                  <span className="font-semibold text-slate-900 font-sans">{formatCLP(orden.total)}</span>
+            <div className="mb-6 p-4 bg-slate-50 rounded-xl border-2 border-slate-200">
+              <div className="space-y-2">
+                <div className="flex justify-between text-base sm:text-lg">
+                  <span className="font-medium text-slate-700">Subtotal:</span>
+                  <span className="font-semibold text-slate-900">{formatCLP(orden.total)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600 font-sans">Propina sugerida (10%):</span>
-                  <span className="font-medium text-slate-700 font-sans">{formatCLP(orden.total * 0.1)}</span>
+                <div className="flex justify-between text-sm sm:text-base">
+                  <span className="text-slate-600">Propina sugerida (10%):</span>
+                  <span className="font-medium text-slate-700">{formatCLP(orden.total * 0.1)}</span>
                 </div>
-                <div 
-                  className="pt-3 mt-3 flex justify-between text-xl"
-                  style={{
-                    borderTop: '2px solid #E5E7EB',
-                  }}
-                >
-                  <span className="font-bold text-slate-900 font-sans">Total:</span>
-                  <span className="font-bold text-green-700 font-sans">{formatCLP(orden.total * 1.1)}</span>
+                <div className="border-t-2 border-slate-300 pt-2 mt-2 flex justify-between text-lg sm:text-xl">
+                  <span className="font-bold text-slate-900">Total:</span>
+                  <span className="font-bold text-green-700">{formatCLP(orden.total * 1.1)}</span>
                 </div>
               </div>
             </div>
@@ -1485,10 +1451,10 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                   type="checkbox"
                   id="conPropina"
                   defaultChecked={true}
-                  className="w-6 h-6 cursor-pointer accent-green-600"
+                  className="w-6 h-6 sm:w-7 sm:h-7 cursor-pointer accent-green-600"
                   aria-label="Incluir propina del 10%"
                 />
-                <span className="text-base font-medium text-slate-700 group-hover:text-slate-900 font-sans">
+                <span className="text-base sm:text-lg font-medium text-slate-700 group-hover:text-slate-900">
                   Incluir propina del 10%
                 </span>
               </label>
@@ -1502,10 +1468,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 }}
                 disabled={saving}
                 aria-label="Cancelar pago"
-                className="flex-1 min-h-[56px] px-6 py-3 border-2 border-warm-200 rounded-xl hover:bg-warm-50 active:scale-[0.98] text-base font-semibold font-sans transition-all duration-200 disabled:opacity-50"
-                style={{
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                }}
+                className="flex-1 min-h-[56px] px-6 py-3 border-2 border-slate-300 rounded-xl hover:bg-slate-50 active:bg-slate-100 text-base sm:text-lg font-semibold focus:outline-none focus:ring-4 focus:ring-slate-300 transition-all disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -1517,10 +1480,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 }}
                 disabled={saving}
                 aria-label="Confirmar pago de la orden"
-                className="flex-1 min-h-[56px] px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-base font-bold font-sans transition-all duration-200"
-                style={{
-                  boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(22, 163, 74, 0.2)',
-                }}
+                className="flex-1 min-h-[56px] px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 active:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-base sm:text-lg font-bold shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-300 transition-all"
               >
                 {saving ? 'Procesando...' : '💰 Confirmar Pago'}
               </button>

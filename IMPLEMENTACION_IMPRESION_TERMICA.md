@@ -203,3 +203,9 @@ Las impresoras deben:
 
 **Implementación completada sin romper funcionalidad existente** ✅
 
+
+
+
+
+
+

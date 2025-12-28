@@ -17,3 +17,9 @@ echo O manualmente: taskkill /PID [numero] /F
 echo.
 pause
 
+
+
+
+
+
+

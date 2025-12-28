@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface OrdenItem {
   id?: string;
@@ -33,6 +34,67 @@ interface ComandaCocinaProps {
 
 export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaProps) {
   const printRef = useRef<HTMLDivElement>(null);
+  const [printing, setPrinting] = useState(false);
+
+  const handleSendToKitchen = async () => {
+    if (printing || !orden?.id) {
+      console.log('[ComandaCocina] handleSendToKitchen bloqueado:', { printing, ordenId: orden?.id });
+      return;
+    }
+    
+    console.log('[ComandaCocina] ========== INICIANDO ENVÍO A COCINA ==========');
+    console.log('[ComandaCocina] Orden ID:', orden.id);
+    
+    setPrinting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      console.log('[ComandaCocina] Token de sesión:', token ? '✅ Presente' : '❌ Faltante');
+      
+      if (!token) {
+        alert('No estás autenticado. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+      
+      const requestBody = {
+        ordenId: orden.id,
+        type: 'kitchen',
+        printerTarget: 'kitchen',
+      };
+      
+      console.log('[ComandaCocina] Llamando a /api/print-jobs con:', requestBody);
+      
+      // Crear print_job en la cola de impresión
+      const response = await fetch('/api/print-jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log('[ComandaCocina] Respuesta recibida:', response.status, response.statusText);
+      
+      const result = await response.json();
+      console.log('[ComandaCocina] Resultado:', result);
+      
+      if (response.ok && result.success) {
+        console.log('[ComandaCocina] ✅ Print job creado exitosamente');
+        alert('✅ Comanda enviada a la cola de impresión');
+      } else {
+        console.error('[ComandaCocina] ❌ Error en respuesta:', result);
+        alert(`❌ Error: ${result.error || result.message || 'No se pudo crear el trabajo de impresión'}`);
+      }
+    } catch (error: any) {
+      console.error('[ComandaCocina] ❌ Error enviando comanda:', error);
+      alert(`❌ Error al enviar comanda: ${error.message || 'Error desconocido'}`);
+    } finally {
+      setPrinting(false);
+      console.log('[ComandaCocina] ========== FIN ENVÍO A COCINA ==========');
+    }
+  };
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -92,7 +154,14 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           onClick={handlePrint}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          🖨️ Imprimir Comanda
+          🖨️ Vista Previa
+        </button>
+        <button
+          onClick={handleSendToKitchen}
+          disabled={printing}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {printing ? '⏳ Enviando...' : '📤 Enviar a Cocina'}
         </button>
         {onClose && (
           <button

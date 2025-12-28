@@ -143,3 +143,9 @@ Cuando ejecutes `probar-manualmente.bat` y veas los logs, busca:
 
 **Los logs ahora muestran TODO el token (completo) para que puedas comparar exactamente qué está pasando.** 🔍
 
+
+
+
+
+
+

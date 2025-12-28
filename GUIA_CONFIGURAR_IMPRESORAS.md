@@ -282,3 +282,9 @@ Si tienes problemas, consulta el manual de tu impresora. Modelos comunes:
 
 **¡Una vez que tengas la IP, Puerto y Tipo, agrégalos al archivo `.env` y reinicia el servidor!** 🎉
 
+
+
+
+
+
+

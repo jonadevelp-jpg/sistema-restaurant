@@ -1,16 +1,25 @@
 /**
  * API Route para actualizar órdenes
  * 
- * Esta ruta usa el backend separado (OrdersController)
+ * Esta ruta maneja la actualización del estado de órdenes.
+ * 
+ * IMPORTANTE: La impresión ya NO está acoplada al cambio de estado.
+ * Para imprimir, usar /api/print-jobs que crea trabajos en la cola de impresión.
+ * 
+ * REFACTORIZADO: Ahora usa controller/service pattern
  */
 
 import type { APIRoute } from 'astro';
-import { OrdersController } from '@backend/controllers/orders.controller';
-import { OrdersService } from '@backend/services/orders.service';
-import { supabase } from '@backend/database/supabase';
+import { requireAuth } from '../../../lib/api-helpers';
+import { OrdersController } from '../../../backend/controllers/orders.controller';
 
 export const PATCH: APIRoute = async (context) => {
   try {
+    // Verificar autenticación
+    const authResult = await requireAuth(context);
+    if (authResult instanceof Response) return authResult;
+    const { supabase: authSupabase } = authResult;
+    
     const ordenId = context.params.id;
     if (!ordenId) {
       return new Response(
@@ -18,16 +27,15 @@ export const PATCH: APIRoute = async (context) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
-
-    // Crear servicio y controller
-    // El controller manejará la autenticación internamente
-    const { supabase: backendSupabase } = await import('@backend/database/supabase');
-    const ordersService = new OrdersService(backendSupabase.supabase);
-    const ordersController = new OrdersController(ordersService);
-
-    // Llamar al controller (maneja auth internamente)
-    return await ordersController.updateOrder(context.request as any, ordenId);
+    
+    console.log('[API Ordenes] ========== ACTUALIZANDO ORDEN ==========');
+    console.log('[API Ordenes] Orden ID:', ordenId);
+    
+    // Crear controller y delegar
+    const controller = new OrdersController(authSupabase);
+    return await controller.update(context, ordenId);
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error en PATCH ordenes/[id]:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),

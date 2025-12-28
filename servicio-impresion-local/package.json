@@ -8,11 +8,10 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "escpos": "^3.0.0-alpha.6",
+    "@supabase/supabase-js": "^2.39.0",
     "dotenv": "^16.3.1"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-

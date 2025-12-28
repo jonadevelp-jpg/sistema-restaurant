@@ -56,13 +56,24 @@ export default function MesasView() {
       if (paraLlevarRes.data) setOrdenesParaLlevar(paraLlevarRes.data);
 
       // Actualizar estado de mesas según órdenes activas
+      // IMPORTANTE: Solo actualizar en la UI, no sobrescribir el estado de la BD
+      // El estado en la BD se actualiza cuando se cancela/elimina una orden
       if (mesasRes.data && ordenesRes.data) {
         const mesasConOrden = new Set(ordenesRes.data.map((o) => o.mesa_id));
-        const mesasActualizadas = mesasRes.data.map((m) => ({
-          ...m,
-          estado: mesasConOrden.has(m.id) ? ('ocupada' as const) : ('libre' as const),
-        }));
+        const mesasActualizadas = mesasRes.data.map((m) => {
+          // Si la mesa tiene una orden activa, mostrar como ocupada
+          // Pero respetar el estado de la BD si no hay orden activa
+          if (mesasConOrden.has(m.id)) {
+            return { ...m, estado: 'ocupada' as const };
+          } else {
+            // Si no hay orden activa, usar el estado de la BD (puede ser 'libre' o 'reservada')
+            return m;
+          }
+        });
         setMesas(mesasActualizadas);
+      } else if (mesasRes.data) {
+        // Si no hay órdenes activas, usar el estado de la BD directamente
+        setMesas(mesasRes.data);
       }
     } catch (error) {
       console.error('Error cargando datos:', error);

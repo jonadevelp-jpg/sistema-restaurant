@@ -140,3 +140,9 @@ Copia el valor de `PRINT_SERVICE_TOKEN=...`
 
 **¡Todo está automatizado! Solo ejecuta `solucionar-todo.bat` y listo.** ✅
 
+
+
+
+
+
+

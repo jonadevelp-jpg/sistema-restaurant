@@ -88,3 +88,9 @@ Con esta configuración, cuando:
 
 **¡USB002 es perfecto y debería funcionar sin problemas!** ✅
 
+
+
+
+
+
+

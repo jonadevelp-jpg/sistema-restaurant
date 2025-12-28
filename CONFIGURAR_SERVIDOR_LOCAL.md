@@ -198,3 +198,9 @@ npm run dev
 
 **¡Con esto, todos los dispositivos en la red podrán usar el sistema e imprimir!** 🎉
 
+
+
+
+
+
+

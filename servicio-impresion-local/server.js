@@ -1,28 +1,35 @@
 /**
- * Servicio Local de Impresión
+ * Servicio Local de Impresión con Polling Automático
  * 
- * Este servicio corre en una PC local del restaurante y se encarga
- * únicamente de recibir comandos de impresión y enviarlos a la impresora.
+ * Este servicio corre en una PC local del restaurante y se encarga de:
+ * 1. Consultar la base de datos periódicamente para detectar órdenes pendientes
+ * 2. Imprimir automáticamente comandas de cocina y boletas usando Windows Spooler
+ * 3. Marcar órdenes como impresas en la base de datos
  * 
- * Si este servicio se apaga, la página web sigue funcionando (solo no imprime).
+ * Compatible con impresoras térmicas POS58 / INSU / BitByte conectadas por USB
+ * que Windows expone como impresoras con puertos virtuales (vport-usb).
  */
 
-// Cargar variables de entorno desde .env
-// IMPORTANTE: dotenv debe estar instalado (npm install dotenv)
-let dotenvLoaded = false;
+// Cargar variables de entorno
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const { createClient } = require('@supabase/supabase-js');
+const { listPrinters, printerExists, ESCPOSFormatter, printRaw } = require('./printer-module');
+const {
+  formatReceiptHeader,
+  formatKitchenHeader,
+  formatOrderInfo,
+  formatKitchenItems,
+  formatReceiptItems,
+  formatReceiptTotals,
+  formatPaymentInfo,
+  formatReceiptFooter,
+  formatKitchenFooter,
+  formatGeneralNote
+} = require('./print-formatters');
 
-// Primero intentar con dotenv
-try {
-  require('dotenv').config({ path: path.join(__dirname, '.env') });
-  dotenvLoaded = true;
-  console.log('✅ Archivo .env cargado con dotenv');
-} catch (error) {
-  console.warn('⚠️  dotenv no disponible o error:', error.message);
-}
-
-// Fallback: cargar .env manualmente (más robusto)
+// Cargar .env manualmente (más robusto que dotenv)
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
   try {
@@ -35,336 +42,597 @@ if (fs.existsSync(envPath)) {
         if (equalIndex > 0) {
           const key = trimmedLine.substring(0, equalIndex).trim();
           const value = trimmedLine.substring(equalIndex + 1).trim();
-          // Remover comillas si las tiene
           const cleanValue = value.replace(/^["']|["']$/g, '');
           if (key && cleanValue) {
             process.env[key] = cleanValue;
             loadedCount++;
-            // Log solo para PRINT_SERVICE_TOKEN para debug
-            if (key === 'PRINT_SERVICE_TOKEN') {
-              console.log(`🔐 Cargado desde .env: ${key}=${cleanValue.substring(0, 20)}...`);
-            }
           }
         }
       }
     });
     if (loadedCount > 0) {
-      console.log(`✅ Archivo .env cargado manualmente (${loadedCount} variables)`);
-      dotenvLoaded = true;
+      console.log(`✅ Archivo .env cargado (${loadedCount} variables)`);
     }
-  } catch (manualError) {
-    console.error('❌ Error cargando .env manualmente:', manualError.message);
+  } catch (error) {
+    console.error('❌ Error cargando .env:', error.message);
   }
 } else {
   console.error(`❌ Archivo .env no encontrado en: ${envPath}`);
 }
 
-if (!dotenvLoaded) {
-  console.error('❌ NO SE PUDO CARGAR EL ARCHIVO .env');
-  console.error('❌ El servicio usará valores por defecto o variables del sistema');
-}
+// ============================================
+// CONFIGURACIÓN DESDE VARIABLES DE ENTORNO
+// ============================================
 
-const http = require('http');
-const { Network, USB, Printer } = require('escpos');
-
-// Configuración desde variables de entorno
 const PORT = process.env.PRINT_SERVICE_PORT || 3001;
-const KITCHEN_PRINTER_TYPE = process.env.PRINTER_KITCHEN_TYPE || 'usb';
-const KITCHEN_PRINTER_PATH = process.env.PRINTER_KITCHEN_PATH || 'USB002';
-const KITCHEN_PRINTER_IP = process.env.PRINTER_KITCHEN_IP;
-const KITCHEN_PRINTER_PORT = parseInt(process.env.PRINTER_KITCHEN_PORT || '9100');
+const PRINTER_KITCHEN_NAME = process.env.PRINTER_KITCHEN_NAME;
+const PRINTER_CASHIER_NAME = process.env.PRINTER_CASHIER_NAME;
 
-const CASHIER_PRINTER_TYPE = process.env.PRINTER_CASHIER_TYPE || 'usb';
-const CASHIER_PRINTER_PATH = process.env.PRINTER_CASHIER_PATH || 'USB002';
-const CASHIER_PRINTER_IP = process.env.PRINTER_CASHIER_IP;
-const CASHIER_PRINTER_PORT = parseInt(process.env.PRINTER_CASHIER_PORT || '9100');
+// Configuración de Polling y Supabase
+const POLLING_ENABLED = process.env.POLLING_ENABLED !== 'false';
+const POLLING_INTERVAL_MS = parseInt(process.env.POLLING_INTERVAL_MS || '3000');
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Token de seguridad (opcional, pero recomendado)
+// Token de seguridad (opcional)
 const API_TOKEN = process.env.PRINT_SERVICE_TOKEN || 'cambiar-este-token';
 
-console.log('🖨️  Servicio de Impresión Local iniciado');
-console.log(`📡 Escuchando en puerto ${PORT}`);
-console.log(`🔐 .env cargado: ${dotenvLoaded ? 'SÍ' : 'NO'}`);
-console.log(`🔐 Token configurado: ${API_TOKEN ? 'SÍ' : 'NO'}`);
-console.log(`🔐 Token (completo): ${API_TOKEN || 'NO CONFIGURADO'}`);
-console.log(`🔐 Token (longitud): ${API_TOKEN ? API_TOKEN.length : 0} caracteres`);
-console.log(`🔐 Token (primeros 30): ${API_TOKEN ? API_TOKEN.substring(0, 30) + '...' : 'NO CONFIGURADO'}`);
+// ============================================
+// VERIFICACIÓN DE CONFIGURACIÓN
+// ============================================
 
-// Verificar si está usando el valor por defecto
-if (API_TOKEN === 'cambiar-este-token') {
-  console.error('⚠️  ADVERTENCIA: El servicio está usando el token por defecto "cambiar-este-token"');
-  console.error('⚠️  Esto significa que el .env NO se cargó correctamente');
-  console.error('⚠️  Verifica que:');
-  console.error('   1. El archivo .env existe en la misma carpeta que server.js');
-  console.error('   2. El archivo .env tiene la línea: PRINT_SERVICE_TOKEN=tu-token-aqui');
-  console.error('   3. dotenv está instalado: npm install dotenv');
-}
+console.log('========================================');
+console.log('  SERVICIO DE IMPRESIÓN LOCAL');
+console.log('========================================\n');
 
-// Conectar a impresora
-function connectPrinter(type, path, ip, port) {
-  try {
-    console.log(`🔌 Conectando a impresora: tipo=${type}, path=${path}, ip=${ip}, port=${port}`);
-    let device;
-    
-    if (type === 'network') {
-      if (!ip || !port) {
-        throw new Error('IP y puerto requeridos para impresora de red');
-      }
-      console.log(`🔌 Creando dispositivo de red: ${ip}:${port}`);
-      device = new Network(ip, port);
+console.log('📋 Verificando configuración...\n');
+
+// Verificar impresoras (async)
+(async () => {
+  console.log('🖨️  Impresoras configuradas:');
+  console.log(`   Cocina: ${PRINTER_KITCHEN_NAME || '❌ NO CONFIGURADA'}`);
+  console.log(`   Caja: ${PRINTER_CASHIER_NAME || '❌ NO CONFIGURADA'}\n`);
+
+  if (PRINTER_KITCHEN_NAME) {
+    const exists = await printerExists(PRINTER_KITCHEN_NAME);
+    if (exists) {
+      console.log(`✅ Impresora de cocina encontrada: "${PRINTER_KITCHEN_NAME}"`);
     } else {
-      console.log(`🔌 Creando dispositivo USB: ${path}`);
-      device = new USB(path);
+      console.error(`❌ Impresora de cocina NO encontrada: "${PRINTER_KITCHEN_NAME}"`);
+      console.error('   Verifica el nombre en: Panel de Control > Dispositivos e impresoras');
+    }
+  }
+
+  if (PRINTER_CASHIER_NAME) {
+    const exists = await printerExists(PRINTER_CASHIER_NAME);
+    if (exists) {
+      console.log(`✅ Impresora de caja encontrada: "${PRINTER_CASHIER_NAME}"`);
+    } else {
+      console.error(`❌ Impresora de caja NO encontrada: "${PRINTER_CASHIER_NAME}"`);
+      console.error('   Verifica el nombre en: Panel de Control > Dispositivos e impresoras');
+    }
+  }
+
+  // Listar todas las impresoras disponibles (para referencia)
+  console.log('\n📋 Impresoras disponibles en el sistema:');
+  const availablePrinters = await listPrinters();
+  if (availablePrinters.length > 0) {
+    availablePrinters.forEach(p => {
+      const marker = (p.name === PRINTER_KITCHEN_NAME || p.name === PRINTER_CASHIER_NAME) ? ' ← CONFIGURADA' : '';
+      console.log(`   - ${p.name}${marker}`);
+    });
+  } else {
+    console.log('   ⚠️  No se encontraron impresoras');
+  }
+  
+  console.log('');
+})();
+
+// Verificar Supabase
+console.log('\n🔍 Verificando Supabase...');
+console.log(`   SUPABASE_URL: ${SUPABASE_URL ? SUPABASE_URL.substring(0, 30) + '...' : '❌ NO CONFIGURADO'}`);
+console.log(`   SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...' : '❌ NO CONFIGURADO'}`);
+
+// Inicializar cliente de Supabase
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+  try {
+    if (!SUPABASE_URL.startsWith('http://') && !SUPABASE_URL.startsWith('https://')) {
+      throw new Error('URL de Supabase inválida');
     }
     
-    console.log(`🔌 Creando impresora...`);
-    const printer = new Printer(device);
-    console.log(`✅ Impresora conectada correctamente`);
-    return printer;
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    console.log('✅ Cliente de Supabase creado');
   } catch (error) {
-    console.error(`❌ Error conectando a impresora:`, error.message);
-    console.error(`❌ Tipo: ${type}, Path: ${path}, IP: ${ip}, Port: ${port}`);
-    console.error(`❌ Stack:`, error.stack);
+    console.error('❌ Error creando cliente de Supabase:', error.message);
+  }
+} else {
+  console.warn('⚠️  Supabase no configurado. El polling no funcionará.');
+}
+
+// Verificar polling
+console.log('\n🔄 Configuración de Polling:');
+console.log(`   Habilitado: ${POLLING_ENABLED ? '✅ Sí' : '❌ No'}`);
+console.log(`   Intervalo: ${POLLING_INTERVAL_MS}ms (${POLLING_INTERVAL_MS / 1000}s)`);
+
+console.log('\n========================================\n');
+
+// ============================================
+// FUNCIONES AUXILIARES DE BASE DE DATOS
+// ============================================
+
+async function getOrdenItems(ordenId) {
+  if (!supabase) return [];
+  
+  try {
+    const { data, error } = await supabase
+      .from('orden_items')
+      .select(`
+        id,
+        cantidad,
+        precio_unitario,
+        subtotal,
+        notas,
+        menu_item:menu_items (
+          id,
+          name,
+          category_id
+        )
+      `)
+      .eq('orden_id', ordenId)
+      .order('created_at', { ascending: true });
+    
+    if (error) {
+      console.error(`❌ Error obteniendo items de orden ${ordenId}:`, error.message);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error(`❌ Error en getOrdenItems:`, error.message);
+    return [];
+  }
+}
+
+async function getMesaInfo(mesaId) {
+  if (!supabase || !mesaId) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('mesas')
+      .select('id, numero, nombre')
+      .eq('id', mesaId)
+      .single();
+    
+    if (error || !data) return null;
+    return data;
+  } catch (error) {
     return null;
   }
 }
 
-// Formatear personalización
-function formatPersonalization(notas) {
-  if (!notas) return '';
+async function markOrderAsPrinted(ordenId, type) {
+  if (!supabase) return false;
   
   try {
-    const personalization = JSON.parse(notas);
-    const parts = [];
+    const updateData = type === 'kitchen'
+      ? { kitchen_printed_at: new Date().toISOString() }
+      : { receipt_printed_at: new Date().toISOString() };
     
-    if (personalization.agregado) parts.push(`Agregado: ${personalization.agregado}`);
-    if (personalization.salsas?.length > 0) {
-      parts.push(`Salsa${personalization.salsas.length > 1 ? 's' : ''}: ${personalization.salsas.join(', ')}`);
-    }
-    if (personalization.sinIngredientes?.length > 0) {
-      parts.push(`Sin: ${personalization.sinIngredientes.join(', ')}`);
-    }
-    if (personalization.bebidas?.length > 0) {
-      const bebidasText = personalization.bebidas.map(b => {
-        if (b.sabor) return `${b.nombre} (${b.sabor})`;
-        return b.nombre;
-      }).join(', ');
-      parts.push(`Bebida${personalization.bebidas.length > 1 ? 's' : ''}: ${bebidasText}`);
-    }
-    if (personalization.detalles) parts.push(`Nota: ${personalization.detalles}`);
+    const { error } = await supabase
+      .from('ordenes_restaurante')
+      .update(updateData)
+      .eq('id', ordenId);
     
-    return parts.join(' | ');
-  } catch {
-    return notas;
+    if (error) {
+      console.error(`❌ Error marcando orden como impresa:`, error.message);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`❌ Error en markOrderAsPrinted:`, error.message);
+    return false;
   }
 }
 
-// Imprimir comanda de cocina
-async function printKitchenCommand(data) {
-  const { orden, items } = data;
-  
-  const printer = connectPrinter(
-    KITCHEN_PRINTER_TYPE,
-    KITCHEN_PRINTER_PATH,
-    KITCHEN_PRINTER_IP,
-    KITCHEN_PRINTER_PORT
-  );
-  
-  if (!printer) {
-    throw new Error('No se pudo conectar a la impresora de cocina');
-  }
+async function incrementPrintAttempts(ordenId, type) {
+  if (!supabase) return;
   
   try {
+    const column = type === 'kitchen' ? 'kitchen_print_attempts' : 'receipt_print_attempts';
+    const { error } = await supabase.rpc('increment', {
+      table_name: 'ordenes_restaurante',
+      column_name: column,
+      row_id: ordenId
+    });
+    
+    // Si la función RPC no existe, intentar update directo
+    if (error) {
+      const { data } = await supabase
+        .from('ordenes_restaurante')
+        .select(column)
+        .eq('id', ordenId)
+        .single();
+      
+      if (data) {
+        const currentValue = data[column] || 0;
+        await supabase
+          .from('ordenes_restaurante')
+          .update({ [column]: currentValue + 1 })
+          .eq('id', ordenId);
+      }
+    }
+  } catch (error) {
+    // No crítico, solo logging
+    console.warn(`⚠️  No se pudo incrementar intentos de impresión:`, error.message);
+  }
+}
+
+// ============================================
+// FUNCIONES DE IMPRESIÓN
+// ============================================
+
+async function printKitchenCommand(data) {
+  // Aceptar tanto { orden, items } como { orden: {...}, items: [...] }
+  const orden = data.orden || data;
+  const items = data.items || [];
+  
+  if (!PRINTER_KITCHEN_NAME) {
+    throw new Error('PRINTER_KITCHEN_NAME no configurado en .env');
+  }
+  
+  const exists = await printerExists(PRINTER_KITCHEN_NAME);
+  if (!exists) {
+    throw new Error(`Impresora "${PRINTER_KITCHEN_NAME}" no encontrada en el sistema`);
+  }
+  
+  console.log(`📋 ========== IMPRIMIENDO COMANDA ==========`);
+  console.log(`📋 Orden: ${orden.numero_orden}`);
+  console.log(`📋 Impresora: ${PRINTER_KITCHEN_NAME}`);
+  
+  try {
+    const formatter = new ESCPOSFormatter();
+    
+    // Inicializar impresora
+    formatter.init();
+    
     // Encabezado
-    printer
-      .font('a')
-      .align('ct')
-      .size(1, 1)
-      .text('COMANDA COCINA')
-      .text('================')
-      .size(0, 0)
-      .align('lt')
-      .text(`Orden: ${orden.numero_orden}`)
-      .text(`Mesa: ${orden.mesas?.numero || 'N/A'}`)
-      .text(`Hora: ${new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
-      .text('----------------')
-      .feed(1);
+    formatKitchenHeader(formatter);
+    
+    // Información de orden
+    formatOrderInfo(formatter, orden);
     
     // Items
-    const itemsPorCategoria = items.reduce((acc, item) => {
-      const categoria = item.menu_item?.category_id || 0;
-      if (!acc[categoria]) acc[categoria] = [];
-      acc[categoria].push(item);
-      return acc;
-    }, {});
-    
-    Object.entries(itemsPorCategoria).forEach(([categoriaId, categoriaItems]) => {
-      categoriaItems.forEach((item) => {
-        const personalization = formatPersonalization(item.notas);
-        
-        printer.text(`${item.cantidad}x ${item.menu_item?.name || 'Item'}`.toUpperCase());
-        
-        if (personalization) {
-          printer.text(`  ${personalization}`).font('b');
-        }
-        
-        printer.feed(1);
-      });
-    });
+    formatKitchenItems(formatter, items);
     
     // Nota general
-    if (orden.nota) {
-      printer
-        .text('----------------')
-        .text('NOTA GENERAL:')
-        .text(orden.nota)
-        .feed(1);
-    }
+    formatGeneralNote(formatter, orden.nota);
     
-    // Pie
-    printer
-      .text('----------------')
-      .align('ct')
-      .text(`Total Items: ${items.reduce((sum, item) => sum + item.cantidad, 0)}`)
-      .text(new Date().toLocaleString('es-CL'))
-      .feed(2)
-      .cut();
+    // Pie (con propina destacada)
+    formatKitchenFooter(formatter, items, orden);
     
-    await printer.close();
-    console.log(`✅ Comanda impresa: Orden ${orden.numero_orden}`);
+    // Imprimir
+    const printData = formatter.getBuffer();
+    await printRaw(PRINTER_KITCHEN_NAME, printData);
+    
+    console.log(`✅ Comanda impresa correctamente: Orden ${orden.numero_orden}`);
     return { success: true, message: 'Comanda impresa correctamente' };
   } catch (error) {
-    console.error('❌ Error imprimiendo comanda:', error);
-    console.error('❌ Detalles:', error.message);
-    console.error('❌ Stack:', error.stack);
-    try {
-      await printer.close();
-    } catch {}
+    console.error('❌ Error imprimiendo comanda:', error.message);
     throw error;
   }
 }
 
-// Imprimir boleta de cliente
 async function printCustomerReceipt(data) {
-  const { orden, items } = data;
+  // Aceptar tanto { orden, items } como { orden: {...}, items: [...] }
+  const orden = data.orden || data;
+  const items = data.items || [];
   
-  const printer = connectPrinter(
-    CASHIER_PRINTER_TYPE,
-    CASHIER_PRINTER_PATH,
-    CASHIER_PRINTER_IP,
-    CASHIER_PRINTER_PORT
-  );
-  
-  if (!printer) {
-    throw new Error('No se pudo conectar a la impresora de caja');
+  if (!PRINTER_CASHIER_NAME) {
+    throw new Error('PRINTER_CASHIER_NAME no configurado en .env');
   }
+  
+  const exists = await printerExists(PRINTER_CASHIER_NAME);
+  if (!exists) {
+    throw new Error(`Impresora "${PRINTER_CASHIER_NAME}" no encontrada en el sistema`);
+  }
+  
+  console.log(`🧾 ========== IMPRIMIENDO BOLETA ==========`);
+  console.log(`🧾 Orden: ${orden.numero_orden}`);
+  console.log(`🧾 Impresora: ${PRINTER_CASHIER_NAME}`);
   
   try {
-    // Calcular desglose IVA
-    const calcularDesgloseIVA = (precioConIVA) => {
-      const precioSinIVA = precioConIVA / 1.19;
-      const iva = precioConIVA - precioSinIVA;
-      return { sinIVA: precioSinIVA, iva, conIVA: precioConIVA };
-    };
+    const formatter = new ESCPOSFormatter();
     
-    const subtotalSinIVA = items.reduce((sum, item) => {
-      const desglose = calcularDesgloseIVA(item.subtotal);
-      return sum + desglose.sinIVA;
-    }, 0);
+    // Inicializar impresora
+    formatter.init();
     
-    const ivaTotal = items.reduce((sum, item) => {
-      const desglose = calcularDesgloseIVA(item.subtotal);
-      return sum + desglose.iva;
-    }, 0);
+    // Encabezado del local
+    formatReceiptHeader(formatter);
     
-    const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+    // Información de orden
+    formatOrderInfo(formatter, orden);
     
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: 'CLP',
-        minimumFractionDigits: 0,
-      }).format(Math.round(price));
-    };
+    // Items con precios
+    formatReceiptItems(formatter, items);
     
-    // Encabezado
-    printer
-      .font('a')
-      .align('ct')
-      .size(1, 1)
-      .text('GOURMET ARABE SPA')
-      .size(0, 0)
-      .text('RUT: 77669643-9')
-      .text('Providencia 1388 Local 49')
-      .text('Celular: 939459286')
-      .text('----------------')
-      .align('lt')
-      .text(`Orden: ${orden.numero_orden}`)
-      .text(`Mesa: ${orden.mesas?.numero || 'Para Llevar'}`)
-      .text(`Fecha: ${new Date(orden.created_at).toLocaleDateString('es-CL')}`)
-      .text(`Hora: ${new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
-      .text('----------------')
-      .feed(1);
+    // Totales (con propina destacada)
+    formatReceiptTotals(formatter, items, orden);
     
-    // Items
-    printer
-      .text('Cant. Descripcion        Total')
-      .text('----------------');
-    
-    items.forEach((item) => {
-      const desglose = calcularDesgloseIVA(item.subtotal);
-      const nombre = (item.menu_item?.name || 'Item').substring(0, 20);
-      const cantidad = item.cantidad.toString().padStart(2);
-      const precio = formatPrice(desglose.sinIVA).padStart(10);
-      
-      printer.text(`${cantidad}  ${nombre.padEnd(20)} ${precio}`);
-    });
-    
-    // Totales
-    printer
-      .text('----------------')
-      .text(`Monto Neto:     ${formatPrice(subtotalSinIVA).padStart(15)}`)
-      .text(`IVA (19%):      ${formatPrice(ivaTotal).padStart(15)}`)
-      .text('----------------')
-      .font('b')
-      .text(`TOTAL:          ${formatPrice(total).padStart(15)}`)
-      .font('a');
-    
-    // Método de pago
-    if (orden.metodo_pago) {
-      printer
-        .text('----------------')
-        .text(`Metodo de Pago: ${orden.metodo_pago}`)
-        .text(`Pagado: ${orden.paid_at ? new Date(orden.paid_at).toLocaleString('es-CL') : 'N/A'}`);
-    }
+    // Información de pago
+    formatPaymentInfo(formatter, orden);
     
     // Pie
-    printer
-      .text('----------------')
-      .align('ct')
-      .text('¡Gracias por su visita!')
-      .text('Carne Halal Certificada 🕌')
-      .text(new Date().toLocaleString('es-CL'))
-      .feed(2)
-      .cut();
+    formatReceiptFooter(formatter);
     
-    await printer.close();
-    console.log(`✅ Boleta impresa: Orden ${orden.numero_orden}`);
+    // Imprimir
+    const printData = formatter.getBuffer();
+    await printRaw(PRINTER_CASHIER_NAME, printData);
+    
+    console.log(`✅ Boleta impresa correctamente: Orden ${orden.numero_orden}`);
     return { success: true, message: 'Boleta impresa correctamente' };
   } catch (error) {
-    console.error('❌ Error imprimiendo boleta:', error);
-    console.error('❌ Detalles:', error.message);
-    console.error('❌ Stack:', error.stack);
-    try {
-      await printer.close();
-    } catch {}
+    console.error('❌ Error imprimiendo boleta:', error.message);
     throw error;
   }
 }
 
-// Servidor HTTP
+// ============================================
+// SISTEMA DE POLLING (COLA DE IMPRESIÓN)
+// ============================================
+// 
+// NUEVO SISTEMA: Consulta print_jobs en lugar de órdenes.
+// Esto separa completamente la impresión del estado de las órdenes.
+// 
+// Flujo:
+// 1. Frontend crea un print_job cuando el usuario solicita impresión
+// 2. El polling consulta print_jobs con status='pending'
+// 3. Procesa cada print_job, imprime y marca como 'printed'
+// 4. Si hay error, marca como 'error' con el mensaje
+
+let isPolling = false;
+let pollingInterval = null;
+
+/**
+ * Marca un print_job como impreso
+ */
+async function markPrintJobAsPrinted(printJobId) {
+  if (!supabase) return;
+  
+  try {
+    const { error } = await supabase
+      .from('print_jobs')
+      .update({
+        status: 'printed',
+        printed_at: new Date().toISOString()
+      })
+      .eq('id', printJobId);
+    
+    if (error) {
+      console.error(`❌ Error marcando print_job ${printJobId} como impreso:`, error.message);
+    }
+  } catch (error) {
+    console.error(`❌ Error marcando print_job ${printJobId} como impreso:`, error.message);
+  }
+}
+
+/**
+ * Marca un print_job como error
+ */
+async function markPrintJobAsError(printJobId, errorMessage) {
+  if (!supabase) return;
+  
+  try {
+    const { error } = await supabase
+      .from('print_jobs')
+      .update({
+        status: 'error',
+        error_message: errorMessage,
+        attempts: supabase.raw('attempts + 1')
+      })
+      .eq('id', printJobId);
+    
+    if (error) {
+      console.error(`❌ Error marcando print_job ${printJobId} como error:`, error.message);
+    }
+  } catch (error) {
+    console.error(`❌ Error marcando print_job ${printJobId} como error:`, error.message);
+  }
+}
+
+/**
+ * Actualiza el estado de un print_job a 'printing' (para evitar procesamiento duplicado)
+ */
+async function markPrintJobAsPrinting(printJobId) {
+  if (!supabase) return;
+  
+  try {
+    const { error } = await supabase
+      .from('print_jobs')
+      .update({ status: 'printing' })
+      .eq('id', printJobId)
+      .eq('status', 'pending'); // Solo actualizar si sigue siendo 'pending'
+    
+    if (error) {
+      console.error(`❌ Error marcando print_job ${printJobId} como printing:`, error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`❌ Error marcando print_job ${printJobId} como printing:`, error.message);
+    return false;
+  }
+}
+
+/**
+ * Polling principal: Consulta print_jobs pendientes y los procesa
+ */
+async function pollForPendingOrders() {
+  if (isPolling) {
+    return; // Silenciosamente saltar si ya está ejecutándose
+  }
+  
+  if (!supabase) {
+    console.warn('⚠️  Supabase no configurado, saltando polling');
+    console.warn('   Verifica que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén en .env');
+    return;
+  }
+  
+  isPolling = true;
+  
+  try {
+    // Buscar print_jobs pendientes (ordenados por created_at)
+    const { data: pendingJobs, error: jobsError } = await supabase
+      .from('print_jobs')
+      .select('id, orden_id, type, printer_target, created_at, attempts')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(10);
+    
+    if (jobsError) {
+      console.error('❌ Error consultando print_jobs:', jobsError.message);
+      console.error('   Verifica:');
+      console.error('   1. Que la tabla print_jobs exista en Supabase');
+      console.error('   2. Que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY sean correctos');
+      console.error('   3. Que el servicio tenga permisos para leer print_jobs');
+    } else if (pendingJobs && pendingJobs.length > 0) {
+      console.log(`🖨️  Encontrados ${pendingJobs.length} trabajo(s) de impresión pendiente(s)`);
+      
+      // Procesar trabajos secuencialmente para evitar concurrencia
+      for (const job of pendingJobs) {
+        try {
+          // Intentar marcar como 'printing' (evita procesamiento duplicado)
+          const marked = await markPrintJobAsPrinting(job.id);
+          if (!marked) {
+            console.log(`⏭️  Print job ${job.id} ya está siendo procesado, saltando...`);
+            continue;
+          }
+          
+          console.log(`🖨️  Procesando print_job ${job.id} (tipo: ${job.type}, impresora: ${job.printer_target})`);
+          
+          // Obtener orden e items (incluir total para calcular propina)
+          const { data: orden, error: ordenError } = await supabase
+            .from('ordenes_restaurante')
+            .select('id, numero_orden, estado, created_at, nota, metodo_pago, paid_at, mesa_id, total, propina_calculada')
+            .eq('id', job.orden_id)
+            .single();
+          
+          if (ordenError || !orden) {
+            await markPrintJobAsError(job.id, `Orden no encontrada: ${ordenError?.message || 'N/A'}`);
+            continue;
+          }
+          
+          const [items, mesa] = await Promise.all([
+            getOrdenItems(orden.id),
+            getMesaInfo(orden.mesa_id)
+          ]);
+          
+          if (items.length === 0) {
+            await markPrintJobAsError(job.id, 'La orden no tiene items');
+            console.warn(`⚠️  Orden ${orden.numero_orden} no tiene items, marcando print_job como error`);
+            continue;
+          }
+          
+          // Preparar datos de orden (incluir total para propina)
+          const ordenData = {
+            id: orden.id,
+            numero_orden: orden.numero_orden,
+            created_at: orden.created_at,
+            nota: orden.nota,
+            metodo_pago: orden.metodo_pago,
+            paid_at: orden.paid_at,
+            total: orden.total || items.reduce((sum, item) => sum + item.subtotal, 0),
+            propina_calculada: orden.propina_calculada,
+            mesas: mesa
+          };
+          
+          // Imprimir según el tipo
+          let result;
+          if (job.type === 'kitchen') {
+            console.log(`📋 Imprimiendo comanda: ${orden.numero_orden}`);
+            result = await printKitchenCommand({ orden: ordenData, items });
+          } else if (job.type === 'receipt' || job.type === 'payment') {
+            console.log(`🧾 Imprimiendo boleta: ${orden.numero_orden}`);
+            result = await printCustomerReceipt({ orden: ordenData, items });
+          } else {
+            await markPrintJobAsError(job.id, `Tipo de impresión desconocido: ${job.type}`);
+            continue;
+          }
+          
+          // Marcar como impreso si fue exitoso
+          if (result && result.success) {
+            await markPrintJobAsPrinted(job.id);
+            console.log(`✅ Print job ${job.id} completado: ${orden.numero_orden}`);
+          } else {
+            const errorMsg = result?.error || 'Error desconocido al imprimir';
+            await markPrintJobAsError(job.id, errorMsg);
+            console.error(`❌ Error en print_job ${job.id}: ${errorMsg}`);
+          }
+          
+          // Pequeño delay entre impresiones para evitar saturar la impresora
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`❌ Error procesando print_job ${job.id}:`, error.message);
+          await markPrintJobAsError(job.id, error.message);
+        }
+      }
+    } else {
+      // Loggear cada 20 ciclos para confirmar que el polling está activo (cada ~60 segundos si intervalo es 3s)
+      const cycleCount = Math.floor(Date.now() / POLLING_INTERVAL_MS);
+      if (cycleCount % 20 === 0) {
+        console.log(`🔍 [Polling activo] No hay trabajos de impresión pendientes (ciclo ${cycleCount})`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error en polling:', error.message);
+  } finally {
+    isPolling = false;
+  }
+}
+
+function startPolling() {
+  if (!POLLING_ENABLED) {
+    console.log('⏸️  Polling deshabilitado (POLLING_ENABLED=false)');
+    return;
+  }
+  
+  if (!supabase) {
+    console.log('⏸️  Polling deshabilitado (Supabase no configurado)');
+    console.log('   Verifica que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén en .env');
+    return;
+  }
+  
+  console.log(`🔄 Iniciando polling automático cada ${POLLING_INTERVAL_MS}ms`);
+  console.log(`   - Consultará print_jobs con status='pending'`);
+  console.log(`   - Procesará trabajos de impresión según su tipo (kitchen/receipt/payment)`);
+  console.log(`   - Marcará como 'printed' o 'error' según el resultado`);
+  console.log(`   ✅ Polling iniciado correctamente`);
+  
+  // Ejecutar inmediatamente el primer ciclo, luego continuar con el intervalo
+  console.log(`🔍 Ejecutando primer ciclo de polling...`);
+  pollForPendingOrders();
+  
+  pollingInterval = setInterval(() => {
+    pollForPendingOrders();
+  }, POLLING_INTERVAL_MS);
+  
+  console.log(`✅ Polling configurado. Próximo ciclo en ${POLLING_INTERVAL_MS}ms`);
+}
+
+function stopPolling() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+    console.log('⏸️  Polling detenido');
+  }
+}
+
+// ============================================
+// SERVIDOR HTTP (OPCIONAL - COMPATIBILIDAD)
+// ============================================
+
 const server = http.createServer(async (req, res) => {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -375,132 +643,200 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   
-  // Solo aceptar POST
   if (req.method !== 'POST') {
-    res.writeHead(405, { 'Content-Type': 'application/json' });
+    res.writeHead(405);
     res.end(JSON.stringify({ error: 'Método no permitido' }));
     return;
   }
   
-  // Verificar token (opcional pero recomendado)
-  const authHeader = req.headers.authorization;
-  console.log('🔐 ========== VERIFICACIÓN DE TOKEN ==========');
-  console.log('🔐 Header Authorization completo:', authHeader || 'NO HAY HEADER');
-  console.log('🔐 Token esperado (completo):', API_TOKEN);
-  console.log('🔐 Token esperado (longitud):', API_TOKEN.length);
-  console.log('🔐 Token esperado (primeros 30):', API_TOKEN.substring(0, 30));
-  console.log('🔐 Token esperado (últimos 10):', API_TOKEN.substring(Math.max(0, API_TOKEN.length - 10)));
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.error('❌ Token no proporcionado en header');
-    console.error('❌ Header recibido:', authHeader || 'VACÍO');
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Token requerido' }));
-    return;
-  }
-  
-  const token = authHeader.replace('Bearer ', '').trim();
-  console.log('🔐 Token recibido (completo):', token);
-  console.log('🔐 Token recibido (longitud):', token.length);
-  console.log('🔐 Token recibido (primeros 30):', token.substring(0, 30));
-  console.log('🔐 Token recibido (últimos 10):', token.substring(Math.max(0, token.length - 10)));
-  
-  // Comparación carácter por carácter para debug
-  const coinciden = token === API_TOKEN;
-  console.log('🔐 Tokens son iguales?', coinciden);
-  
-  if (!coinciden) {
-    // Encontrar la primera diferencia
-    const minLen = Math.min(token.length, API_TOKEN.length);
-    for (let i = 0; i < minLen; i++) {
-      if (token[i] !== API_TOKEN[i]) {
-        console.error(`❌ Diferencia en posición ${i}:`);
-        console.error(`   Recibido: "${token[i]}" (código: ${token.charCodeAt(i)})`);
-        console.error(`   Esperado: "${API_TOKEN[i]}" (código: ${API_TOKEN.charCodeAt(i)})`);
-        break;
-      }
-    }
-    if (token.length !== API_TOKEN.length) {
-      console.error(`❌ Diferencia de longitud: recibido ${token.length}, esperado ${API_TOKEN.length}`);
-    }
-    
-    console.error('❌ Token inválido - Comparación fallida');
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      error: 'Token inválido',
-      debug: {
-        recibido_length: token.length,
-        esperado_length: API_TOKEN.length,
-        primeros_recibido: token.substring(0, 10),
-        primeros_esperado: API_TOKEN.substring(0, 10)
-      }
-    }));
-    return;
-  }
-  console.log('✅ Token válido - Autenticación exitosa');
-  
   let body = '';
-  req.on('data', chunk => {
-    body += chunk.toString();
-  });
-  
+  req.on('data', chunk => { body += chunk.toString(); });
   req.on('end', async () => {
     try {
-      console.log('📥 Petición recibida, parseando body...');
       const data = JSON.parse(body);
-      console.log('📥 Tipo:', data.type);
-      console.log('📥 Orden:', data.orden?.numero_orden);
-      console.log('📥 Items:', data.items?.length || 0);
       
-      const { type, orden, items } = data;
+      // Verificar token de autorización (Bearer token)
+      const authHeader = req.headers.authorization;
+      const token = authHeader ? authHeader.replace('Bearer ', '') : data.token;
       
-      if (!type || !orden || !items) {
-        throw new Error('Datos incompletos. Se requiere: type, orden, items');
+      if (token && token !== API_TOKEN) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: 'Token inválido' }));
+        return;
       }
       
-      let result;
-      
-      if (type === 'kitchen') {
-        console.log('📋 Imprimiendo comanda de cocina...');
-        result = await printKitchenCommand({ orden, items });
-      } else if (type === 'receipt') {
-        console.log('🧾 Imprimiendo boleta de cliente...');
-        result = await printCustomerReceipt({ orden, items });
+      // Manejar peticiones en la raíz con type en el body (formato antiguo - DEPRECADO)
+      // NOTA: Este endpoint está deprecado. El nuevo sistema usa print_jobs.
+      // Se mantiene por compatibilidad, pero ahora crea un print_job en lugar de imprimir directamente.
+      if ((req.url === '/' || req.url === '') && data.type && data.orden && data.items) {
+        const type = data.type; // 'kitchen' o 'receipt'
+        const orden = data.orden;
+        
+        try {
+          // Determinar printer_target
+          const printerTarget = type === 'kitchen' ? 'kitchen' : 'cashier';
+          
+          // Crear print_job en lugar de imprimir directamente
+          const { data: printJob, error: printJobError } = await supabase
+            .from('print_jobs')
+            .insert({
+              orden_id: orden.id,
+              type: type,
+              printer_target: printerTarget,
+              status: 'pending',
+              requested_by: null // No tenemos info del usuario en este endpoint
+            })
+            .select()
+            .single();
+          
+          if (printJobError) {
+            console.error(`❌ [HTTP] Error creando print_job:`, printJobError.message);
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Error al crear trabajo de impresión: ' + printJobError.message }));
+            return;
+          }
+          
+          console.log(`✅ [HTTP] Print job creado: ${printJob.id} (tipo: ${type}, orden: ${orden.numero_orden})`);
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Trabajo de impresión creado en la cola',
+            print_job_id: printJob.id
+          }));
+        } catch (error) {
+          console.error(`❌ [HTTP] Error procesando solicitud:`, error.message);
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: error.message }));
+        }
+      }
+      // Endpoints básicos (compatibilidad - formato antiguo - DEPRECADO)
+      // NOTA: Estos endpoints están deprecados. El nuevo sistema usa print_jobs.
+      // Se mantienen por compatibilidad, pero ahora crean print_jobs en lugar de imprimir directamente.
+      else if (req.url === '/print/kitchen' && data.orden && data.items) {
+        try {
+          const orden = data.orden;
+          
+          // Crear print_job en lugar de imprimir directamente
+          const { data: printJob, error: printJobError } = await supabase
+            .from('print_jobs')
+            .insert({
+              orden_id: orden.id,
+              type: 'kitchen',
+              printer_target: 'kitchen',
+              status: 'pending',
+              requested_by: null
+            })
+            .select()
+            .single();
+          
+          if (printJobError) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Error al crear trabajo de impresión: ' + printJobError.message }));
+            return;
+          }
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Trabajo de impresión creado en la cola',
+            print_job_id: printJob.id
+          }));
+        } catch (error) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: error.message }));
+        }
+      } else if (req.url === '/print/receipt' && data.orden && data.items) {
+        try {
+          const orden = data.orden;
+          
+          // Crear print_job en lugar de imprimir directamente
+          const { data: printJob, error: printJobError } = await supabase
+            .from('print_jobs')
+            .insert({
+              orden_id: orden.id,
+              type: 'receipt',
+              printer_target: 'cashier',
+              status: 'pending',
+              requested_by: null
+            })
+            .select()
+            .single();
+          
+          if (printJobError) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Error al crear trabajo de impresión: ' + printJobError.message }));
+            return;
+          }
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Trabajo de impresión creado en la cola',
+            print_job_id: printJob.id
+          }));
+        } catch (error) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: error.message }));
+        }
       } else {
-        throw new Error('Tipo de impresión inválido. Use "kitchen" o "receipt"');
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: 'Endpoint no encontrado' }));
       }
-      
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(result));
     } catch (error) {
-      console.error('❌ Error procesando solicitud:', error);
-      console.error('❌ Detalles:', error.message);
-      console.error('❌ Stack:', error.stack);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        error: error.message || 'Error interno del servidor',
-        success: false 
-      }));
+      console.error(`❌ [HTTP] Error procesando petición:`, error.message);
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: error.message }));
     }
   });
 });
 
+// ============================================
+// INICIO DEL SERVICIO
+// ============================================
+
+// Intentar iniciar el servidor HTTP (opcional, no crítico)
 server.listen(PORT, () => {
-  console.log(`✅ Servicio de impresión escuchando en http://localhost:${PORT}`);
-  console.log(`📋 Impresora Cocina: ${KITCHEN_PRINTER_TYPE} - ${KITCHEN_PRINTER_PATH || KITCHEN_PRINTER_IP}`);
-  console.log(`📋 Impresora Caja: ${CASHIER_PRINTER_TYPE} - ${CASHIER_PRINTER_PATH || CASHIER_PRINTER_IP}`);
+  console.log(`\n✅ Servidor HTTP iniciado en puerto ${PORT}`);
+  console.log(`   (Opcional - el polling funciona sin servidor HTTP)\n`);
+}).on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.log(`\n⚠️  Puerto ${PORT} ya está en uso. Servidor HTTP no iniciado.`);
+    console.log(`   El polling seguirá funcionando normalmente.\n`);
+  } else {
+    console.error(`\n❌ Error iniciando servidor HTTP:`, error.message);
+    console.log(`   El polling seguirá funcionando normalmente.\n`);
+  }
 });
 
-// Manejar errores
-server.on('error', (error) => {
-  console.error('❌ Error en el servidor:', error);
-});
+// Iniciar polling
+console.log('\n🚀 ========== INICIANDO SERVICIO ==========');
+console.log(`📅 Fecha/Hora: ${new Date().toLocaleString('es-CL')}`);
+console.log(`📁 Directorio: ${__dirname}`);
+console.log(`🖥️  Node.js: ${process.version}`);
+console.log(`🔄 Polling: ${POLLING_ENABLED ? 'HABILITADO' : 'DESHABILITADO'}`);
+console.log(`📊 Supabase: ${supabase ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
+console.log(`🖨️  Impresora Cocina: ${PRINTER_KITCHEN_NAME || 'NO CONFIGURADA'}`);
+console.log(`🖨️  Impresora Caja: ${PRINTER_CASHIER_NAME || 'NO CONFIGURADA'}`);
+console.log('========================================\n');
 
-// Manejar cierre
+startPolling();
+
+// Manejo de cierre graceful
 process.on('SIGINT', () => {
-  console.log('\n🛑 Cerrando servicio de impresión...');
+  console.log('\n\n🛑 Deteniendo servicio...');
+  stopPolling();
   server.close(() => {
-    console.log('✅ Servicio cerrado correctamente');
+    console.log('✅ Servicio detenido correctamente');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n\n🛑 Deteniendo servicio...');
+  stopPolling();
+  server.close(() => {
+    console.log('✅ Servicio detenido correctamente');
     process.exit(0);
   });
 });
