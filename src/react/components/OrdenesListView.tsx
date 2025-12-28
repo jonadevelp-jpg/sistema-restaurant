@@ -93,19 +93,48 @@ export default function OrdenesListView() {
     .reduce((sum, o) => sum + o.total, 0);
 
   async function eliminarOrden(ordenId: string) {
-    if (!confirm('¿Estás seguro de eliminar esta orden? Esta acción no se puede deshacer.')) {
+    if (!confirm('¿Estás seguro de eliminar esta orden? Esta acción no se puede deshacer y liberará la mesa si está asignada.')) {
       return;
     }
 
     try {
-      const { error } = await supabase
+      // Obtener la orden para saber si tiene mesa asignada
+      const { data: orden, error: fetchError } = await supabase
+        .from('ordenes_restaurante')
+        .select('mesa_id')
+        .eq('id', ordenId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const mesaId = orden?.mesa_id;
+
+      // Eliminar la orden
+      const { error: deleteError } = await supabase
         .from('ordenes_restaurante')
         .delete()
         .eq('id', ordenId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
+
+      // Liberar la mesa si tenía una asignada
+      if (mesaId) {
+        const { error: mesaError } = await supabase
+          .from('mesas')
+          .update({ estado: 'libre' })
+          .eq('id', mesaId);
+
+        if (mesaError) {
+          console.error('[eliminarOrden] Error liberando mesa:', mesaError);
+          // No lanzar error, solo loguearlo
+        } else {
+          console.log(`[eliminarOrden] Mesa ${mesaId} liberada correctamente`);
+        }
+      }
+
       loadOrdenes();
     } catch (error: any) {
+      console.error('[eliminarOrden] Error:', error);
       alert('Error eliminando orden: ' + error.message);
     }
   }

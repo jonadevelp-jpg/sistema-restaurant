@@ -390,6 +390,9 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     try {
       setSaving(true);
       
+      // Guardar el mesa_id antes de eliminar la orden
+      const mesaId = orden?.mesa_id;
+      
       // Eliminar todos los items de la orden
       if (items.length > 0) {
         const { error: itemsError } = await supabase
@@ -397,30 +400,44 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           .delete()
           .eq('orden_id', ordenId);
 
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('[cancelarOrden] Error eliminando items:', itemsError);
+          throw itemsError;
+        }
       }
 
-      // Liberar la mesa si tiene una asignada
-      if (orden?.mesa_id) {
-        await supabase
-          .from('mesas')
-          .update({ estado: 'libre' })
-          .eq('id', orden.mesa_id);
-      }
-
-      // Eliminar la orden
-      const { error } = await supabase
+      // Eliminar la orden primero
+      const { error: deleteError } = await supabase
         .from('ordenes_restaurante')
         .delete()
         .eq('id', ordenId);
 
-      if (error) throw error;
+      if (deleteError) {
+        console.error('[cancelarOrden] Error eliminando orden:', deleteError);
+        throw deleteError;
+      }
+
+      // Liberar la mesa DESPUÉS de eliminar la orden (para evitar conflictos)
+      if (mesaId) {
+        const { error: mesaError } = await supabase
+          .from('mesas')
+          .update({ estado: 'libre' })
+          .eq('id', mesaId);
+
+        if (mesaError) {
+          console.error('[cancelarOrden] Error liberando mesa:', mesaError);
+          // No lanzar error aquí, solo loguearlo, porque la orden ya fue eliminada
+          alert('⚠️ Orden cancelada, pero hubo un problema al liberar la mesa. Por favor, libérala manualmente.');
+        } else {
+          console.log(`[cancelarOrden] Mesa ${mesaId} liberada correctamente`);
+        }
+      }
 
       // Redirigir a mesas
       window.location.href = '/admin/mesas';
     } catch (error: any) {
+      console.error('[cancelarOrden] Error general:', error);
       alert('Error cancelando orden: ' + error.message);
-    } finally {
       setSaving(false);
     }
   }
