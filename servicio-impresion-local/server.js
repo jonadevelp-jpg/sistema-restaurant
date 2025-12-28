@@ -257,6 +257,35 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     console.log('✅ Cliente de Supabase inicializado para polling');
     console.log(`   URL: ${SUPABASE_URL}`);
+    
+    // Test de conexión inmediato
+    console.log('🔍 Probando conexión a Supabase...');
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ordenes_restaurante')
+          .select('id')
+          .limit(1);
+        
+        if (error) {
+          console.error('❌ Error en test de conexión:', error.message);
+          console.error('   Código:', error.code);
+          console.error('   Detalles:', error.details);
+          if (error.message.includes('fetch failed')) {
+            console.error('   🔍 DIAGNÓSTICO: No se puede conectar a Supabase');
+            console.error('      - Verifica que la URL sea correcta');
+            console.error('      - Verifica que la SERVICE_ROLE_KEY sea correcta');
+            console.error('      - Verifica tu conexión a internet');
+            console.error('      - Verifica que no haya firewall bloqueando');
+          }
+        } else {
+          console.log('✅ Test de conexión exitoso - Supabase está accesible');
+        }
+      } catch (testError) {
+        console.error('❌ Error en test de conexión:', testError.message);
+        console.error('   Stack:', testError.stack);
+      }
+    })();
   } catch (error) {
     console.error('❌ Error inicializando Supabase:', error.message);
     console.error('   Stack:', error.stack);
