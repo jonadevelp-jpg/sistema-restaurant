@@ -55,3 +55,4 @@ echo Ejecuta: verificar-escpos.bat para verificar
 echo.
 pause
 
+

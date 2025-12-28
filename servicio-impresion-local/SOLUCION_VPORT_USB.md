@@ -117,3 +117,4 @@ Después de cambiar el `.env`, verifica:
 3. Verifica que `escpos-usb` esté instalado correctamente
 4. Si nada funciona, considera usar impresión RAW directa
 
+

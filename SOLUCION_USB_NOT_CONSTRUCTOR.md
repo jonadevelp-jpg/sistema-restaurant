@@ -108,3 +108,4 @@ verificar-escpos.bat
 
 **El código corregido ahora maneja diferentes formas de importación automáticamente.** ✅
 
+

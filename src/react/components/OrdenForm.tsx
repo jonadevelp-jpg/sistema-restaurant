@@ -681,34 +681,35 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
       setShowPagoModal(false);
       
-      // Imprimir boleta automáticamente al pagar
+      // Crear print_job para boleta automáticamente al pagar
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         
         if (token) {
-          // La API route hace el fetch al servicio local (evita Mixed Content)
-          const printResponse = await fetch('/api/print', {
+          // Crear print_job en la cola de impresión
+          const printResponse = await fetch('/api/print-jobs', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({
-              type: 'receipt',
               ordenId: ordenId,
+              type: 'payment',
+              printerTarget: 'cashier',
             }),
           });
           
           if (printResponse.ok) {
-            console.log('[OrdenForm] ✅ Boleta impresa automáticamente al pagar');
+            console.log('[OrdenForm] ✅ Trabajo de impresión de boleta creado automáticamente al pagar');
           } else {
-            console.warn('[OrdenForm] ⚠️ No se pudo imprimir boleta automáticamente, pero el pago fue exitoso');
+            console.warn('[OrdenForm] ⚠️ No se pudo crear el trabajo de impresión, pero el pago fue exitoso');
           }
         }
       } catch (printError) {
-        console.error('[OrdenForm] Error imprimiendo boleta automáticamente:', printError);
-        // No bloquear el flujo si falla la impresión
+        console.error('[OrdenForm] Error creando trabajo de impresión:', printError);
+        // No bloquear el flujo si falla la creación del print_job
       }
       
       // Mostrar boleta antes de redirigir

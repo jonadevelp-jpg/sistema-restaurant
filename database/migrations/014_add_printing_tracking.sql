@@ -47,3 +47,4 @@ WHERE table_name = 'ordenes_restaurante'
   AND column_name IN ('kitchen_printed_at', 'receipt_printed_at', 'kitchen_print_attempts', 'receipt_print_attempts')
 ORDER BY column_name;
 
+

@@ -94,3 +94,6 @@ Cuando cambies el estado a "Preparación", deberías ver:
 
 
 
+
+
+

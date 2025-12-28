@@ -210,3 +210,4 @@ LIMIT 5;
 4. Cambia estado a "En Preparación"
 5. ¡Debería imprimirse automáticamente! 🎉
 
+

@@ -504,13 +504,95 @@ async function printCustomerReceipt(data) {
 }
 
 // ============================================
-// SISTEMA DE POLLING
+// SISTEMA DE POLLING (COLA DE IMPRESIÓN)
 // ============================================
+// 
+// NUEVO SISTEMA: Consulta print_jobs en lugar de órdenes.
+// Esto separa completamente la impresión del estado de las órdenes.
+// 
+// Flujo:
+// 1. Frontend crea un print_job cuando el usuario solicita impresión
+// 2. El polling consulta print_jobs con status='pending'
+// 3. Procesa cada print_job, imprime y marca como 'printed'
+// 4. Si hay error, marca como 'error' con el mensaje
 
 let isPolling = false;
 let pollingInterval = null;
-let serviceStartTime = null; // Tiempo de inicio del servicio
 
+/**
+ * Marca un print_job como impreso
+ */
+async function markPrintJobAsPrinted(printJobId) {
+  if (!supabase) return;
+  
+  try {
+    const { error } = await supabase
+      .from('print_jobs')
+      .update({
+        status: 'printed',
+        printed_at: new Date().toISOString()
+      })
+      .eq('id', printJobId);
+    
+    if (error) {
+      console.error(`❌ Error marcando print_job ${printJobId} como impreso:`, error.message);
+    }
+  } catch (error) {
+    console.error(`❌ Error marcando print_job ${printJobId} como impreso:`, error.message);
+  }
+}
+
+/**
+ * Marca un print_job como error
+ */
+async function markPrintJobAsError(printJobId, errorMessage) {
+  if (!supabase) return;
+  
+  try {
+    const { error } = await supabase
+      .from('print_jobs')
+      .update({
+        status: 'error',
+        error_message: errorMessage,
+        attempts: supabase.raw('attempts + 1')
+      })
+      .eq('id', printJobId);
+    
+    if (error) {
+      console.error(`❌ Error marcando print_job ${printJobId} como error:`, error.message);
+    }
+  } catch (error) {
+    console.error(`❌ Error marcando print_job ${printJobId} como error:`, error.message);
+  }
+}
+
+/**
+ * Actualiza el estado de un print_job a 'printing' (para evitar procesamiento duplicado)
+ */
+async function markPrintJobAsPrinting(printJobId) {
+  if (!supabase) return;
+  
+  try {
+    const { error } = await supabase
+      .from('print_jobs')
+      .update({ status: 'printing' })
+      .eq('id', printJobId)
+      .eq('status', 'pending'); // Solo actualizar si sigue siendo 'pending'
+    
+    if (error) {
+      console.error(`❌ Error marcando print_job ${printJobId} como printing:`, error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`❌ Error marcando print_job ${printJobId} como printing:`, error.message);
+    return false;
+  }
+}
+
+/**
+ * Polling principal: Consulta print_jobs pendientes y los procesa
+ */
 async function pollForPendingOrders() {
   if (isPolling) {
     return; // Silenciosamente saltar si ya está ejecutándose
@@ -524,41 +606,42 @@ async function pollForPendingOrders() {
   isPolling = true;
   
   try {
-    // Para órdenes de cocina: NO filtrar por created_at porque el estado puede cambiar
-    // después de que la orden fue creada. Solo buscar órdenes con estado 'preparing'
-    // que no hayan sido impresas aún.
-    
-    // Buscar órdenes pendientes de impresión de cocina
-    const { data: kitchenOrders, error: kitchenError } = await supabase
-      .from('ordenes_restaurante')
-      .select('id, numero_orden, estado, created_at, nota, mesa_id')
-      .eq('estado', 'preparing')
-      .is('kitchen_printed_at', null)
+    // Buscar print_jobs pendientes (ordenados por created_at)
+    const { data: pendingJobs, error: jobsError } = await supabase
+      .from('print_jobs')
+      .select('id, orden_id, type, printer_target, created_at, attempts')
+      .eq('status', 'pending')
       .order('created_at', { ascending: true })
       .limit(10);
     
-    if (kitchenError) {
-      console.error('❌ Error consultando órdenes de cocina:', kitchenError.message);
-    } else {
-      // Log para debugging (solo cuando hay órdenes o cada 20 ciclos)
-      if (kitchenOrders && kitchenOrders.length > 0) {
-        console.log(`📋 Encontradas ${kitchenOrders.length} orden(es) pendientes de impresión de cocina`);
-        kitchenOrders.forEach(o => {
-          console.log(`   - ${o.numero_orden} (creada: ${new Date(o.created_at).toLocaleString('es-CL')})`);
-        });
-      } else if (Math.random() < 0.05) {
-        // Loggear ocasionalmente para confirmar que el polling está activo
-        console.log(`🔍 [Polling activo] No hay órdenes de cocina pendientes`);
-      }
-    }
-    
-    if (kitchenOrders && kitchenOrders.length > 0) {
-      console.log(`📋 Encontradas ${kitchenOrders.length} orden(es) pendientes de impresión de cocina`);
+    if (jobsError) {
+      console.error('❌ Error consultando print_jobs:', jobsError.message);
+    } else if (pendingJobs && pendingJobs.length > 0) {
+      console.log(`🖨️  Encontrados ${pendingJobs.length} trabajo(s) de impresión pendiente(s)`);
       
-      // Procesar órdenes secuencialmente para evitar concurrencia
-      for (const orden of kitchenOrders) {
+      // Procesar trabajos secuencialmente para evitar concurrencia
+      for (const job of pendingJobs) {
         try {
-          console.log(`🖨️  Procesando orden de cocina: ${orden.numero_orden}`);
+          // Intentar marcar como 'printing' (evita procesamiento duplicado)
+          const marked = await markPrintJobAsPrinting(job.id);
+          if (!marked) {
+            console.log(`⏭️  Print job ${job.id} ya está siendo procesado, saltando...`);
+            continue;
+          }
+          
+          console.log(`🖨️  Procesando print_job ${job.id} (tipo: ${job.type}, impresora: ${job.printer_target})`);
+          
+          // Obtener orden e items
+          const { data: orden, error: ordenError } = await supabase
+            .from('ordenes_restaurante')
+            .select('id, numero_orden, estado, created_at, nota, metodo_pago, paid_at, mesa_id')
+            .eq('id', job.orden_id)
+            .single();
+          
+          if (ordenError || !orden) {
+            await markPrintJobAsError(job.id, `Orden no encontrada: ${ordenError?.message || 'N/A'}`);
+            continue;
+          }
           
           const [items, mesa] = await Promise.all([
             getOrdenItems(orden.id),
@@ -566,113 +649,55 @@ async function pollForPendingOrders() {
           ]);
           
           if (items.length === 0) {
-            console.warn(`⚠️  Orden ${orden.numero_orden} no tiene items, saltando...`);
-            // Marcar como impresa para evitar loops infinitos
-            await markOrderAsPrinted(orden.id, 'kitchen');
+            await markPrintJobAsError(job.id, 'La orden no tiene items');
+            console.warn(`⚠️  Orden ${orden.numero_orden} no tiene items, marcando print_job como error`);
             continue;
           }
           
+          // Preparar datos de orden
           const ordenData = {
             id: orden.id,
             numero_orden: orden.numero_orden,
             created_at: orden.created_at,
             nota: orden.nota,
-            mesas: mesa
-          };
-          
-          await incrementPrintAttempts(orden.id, 'kitchen');
-          const result = await printKitchenCommand({ orden: ordenData, items });
-          
-          if (result && result.success) {
-            await markOrderAsPrinted(orden.id, 'kitchen');
-            console.log(`✅ Orden ${orden.numero_orden} impresa y marcada en BD`);
-          } else {
-            console.error(`❌ Error imprimiendo orden ${orden.numero_orden}, NO se marca como impresa`);
-          }
-          
-          // Pequeño delay entre impresiones para evitar saturar la impresora
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-          console.error(`❌ Error procesando orden ${orden.numero_orden}:`, error.message);
-        }
-      }
-    }
-    
-    // Buscar órdenes pendientes de impresión de boleta
-    // Para boletas, usar paid_at - solo procesar órdenes pagadas después del inicio del servicio
-    const minPaidAt = serviceStartTime 
-      ? new Date(serviceStartTime).toISOString()
-      : new Date(Date.now() - 5 * 60 * 1000).toISOString(); // Últimos 5 minutos como fallback
-    
-    const { data: receiptOrders, error: receiptError } = await supabase
-      .from('ordenes_restaurante')
-      .select('id, numero_orden, estado, created_at, metodo_pago, paid_at, mesa_id')
-      .eq('estado', 'paid')
-      .is('receipt_printed_at', null)
-      .gte('paid_at', minPaidAt) // Solo órdenes pagadas después del inicio
-      .order('paid_at', { ascending: true })
-      .limit(10);
-    
-    if (receiptError) {
-      console.error('❌ Error consultando órdenes de boleta:', receiptError.message);
-    } else {
-      // Log para debugging (solo cuando hay órdenes o cada 20 ciclos)
-      if (receiptOrders && receiptOrders.length > 0) {
-        console.log(`🧾 Encontradas ${receiptOrders.length} orden(es) pendientes de impresión de boleta`);
-        receiptOrders.forEach(o => {
-          console.log(`   - ${o.numero_orden} (pagada: ${o.paid_at ? new Date(o.paid_at).toLocaleString('es-CL') : 'N/A'})`);
-        });
-      } else if (Math.random() < 0.05) {
-        // Loggear ocasionalmente para confirmar que el polling está activo
-        console.log(`🔍 [Polling activo] No hay órdenes de boleta pendientes`);
-      }
-    }
-    
-    if (receiptOrders && receiptOrders.length > 0) {
-      console.log(`🧾 Encontradas ${receiptOrders.length} orden(es) pendientes de impresión de boleta`);
-      
-      // Procesar órdenes secuencialmente para evitar concurrencia
-      for (const orden of receiptOrders) {
-        try {
-          console.log(`🖨️  Procesando boleta: ${orden.numero_orden}`);
-          
-          const [items, mesa] = await Promise.all([
-            getOrdenItems(orden.id),
-            getMesaInfo(orden.mesa_id)
-          ]);
-          
-          if (items.length === 0) {
-            console.warn(`⚠️  Orden ${orden.numero_orden} no tiene items, saltando...`);
-            // Marcar como impresa para evitar loops infinitos
-            await markOrderAsPrinted(orden.id, 'receipt');
-            continue;
-          }
-          
-          const ordenData = {
-            id: orden.id,
-            numero_orden: orden.numero_orden,
-            created_at: orden.created_at,
             metodo_pago: orden.metodo_pago,
             paid_at: orden.paid_at,
             mesas: mesa
           };
           
-          await incrementPrintAttempts(orden.id, 'receipt');
-          const result = await printCustomerReceipt({ orden: ordenData, items });
-          
-          if (result && result.success) {
-            await markOrderAsPrinted(orden.id, 'receipt');
-            console.log(`✅ Boleta ${orden.numero_orden} impresa y marcada en BD`);
+          // Imprimir según el tipo
+          let result;
+          if (job.type === 'kitchen') {
+            console.log(`📋 Imprimiendo comanda: ${orden.numero_orden}`);
+            result = await printKitchenCommand({ orden: ordenData, items });
+          } else if (job.type === 'receipt' || job.type === 'payment') {
+            console.log(`🧾 Imprimiendo boleta: ${orden.numero_orden}`);
+            result = await printCustomerReceipt({ orden: ordenData, items });
           } else {
-            console.error(`❌ Error imprimiendo boleta ${orden.numero_orden}, NO se marca como impresa`);
+            await markPrintJobAsError(job.id, `Tipo de impresión desconocido: ${job.type}`);
+            continue;
+          }
+          
+          // Marcar como impreso si fue exitoso
+          if (result && result.success) {
+            await markPrintJobAsPrinted(job.id);
+            console.log(`✅ Print job ${job.id} completado: ${orden.numero_orden}`);
+          } else {
+            const errorMsg = result?.error || 'Error desconocido al imprimir';
+            await markPrintJobAsError(job.id, errorMsg);
+            console.error(`❌ Error en print_job ${job.id}: ${errorMsg}`);
           }
           
           // Pequeño delay entre impresiones para evitar saturar la impresora
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-          console.error(`❌ Error procesando boleta ${orden.numero_orden}:`, error.message);
+          console.error(`❌ Error procesando print_job ${job.id}:`, error.message);
+          await markPrintJobAsError(job.id, error.message);
         }
       }
+    } else if (Math.random() < 0.05) {
+      // Loggear ocasionalmente para confirmar que el polling está activo
+      console.log(`🔍 [Polling activo] No hay trabajos de impresión pendientes`);
     }
   } catch (error) {
     console.error('❌ Error en polling:', error.message);
@@ -692,13 +717,10 @@ function startPolling() {
     return;
   }
   
-  // Guardar el tiempo de inicio del servicio
-  serviceStartTime = new Date();
-  
   console.log(`🔄 Iniciando polling automático cada ${POLLING_INTERVAL_MS}ms`);
-  console.log(`   - Buscará órdenes con estado 'preparing' sin kitchen_printed_at`);
-  console.log(`   - Buscará órdenes con estado 'paid' sin receipt_printed_at (pagadas después de: ${serviceStartTime.toLocaleString('es-CL')})`);
-  console.log(`   ⚠️  NOTA: Las órdenes de cocina se procesarán independientemente de cuándo fueron creadas`);
+  console.log(`   - Consultará print_jobs con status='pending'`);
+  console.log(`   - Procesará trabajos de impresión según su tipo (kitchen/receipt/payment)`);
+  console.log(`   - Marcará como 'printed' o 'error' según el resultado`);
   
   // Ejecutar inmediatamente el primer ciclo, luego continuar con el intervalo
   pollForPendingOrders();
@@ -753,73 +775,116 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       
-      // Manejar peticiones en la raíz con type en el body (nuevo formato)
+      // Manejar peticiones en la raíz con type en el body (formato antiguo - DEPRECADO)
+      // NOTA: Este endpoint está deprecado. El nuevo sistema usa print_jobs.
+      // Se mantiene por compatibilidad, pero ahora crea un print_job en lugar de imprimir directamente.
       if ((req.url === '/' || req.url === '') && data.type && data.orden && data.items) {
         const type = data.type; // 'kitchen' o 'receipt'
         const orden = data.orden;
-        const items = data.items;
         
         try {
-          let result;
-          if (type === 'kitchen') {
-            console.log(`📋 [HTTP] Imprimiendo comanda: ${orden.numero_orden}`);
-            result = await printKitchenCommand({ orden, items });
-            
-            // Marcar como impresa si fue exitoso
-            if (result && result.success && orden.id) {
-              await markOrderAsPrinted(orden.id, 'kitchen');
-              console.log(`✅ [HTTP] Orden ${orden.numero_orden} marcada como impresa (kitchen)`);
-            }
-          } else if (type === 'receipt') {
-            console.log(`🧾 [HTTP] Imprimiendo boleta: ${orden.numero_orden}`);
-            result = await printCustomerReceipt({ orden, items });
-            
-            // Marcar como impresa si fue exitoso
-            if (result && result.success && orden.id) {
-              await markOrderAsPrinted(orden.id, 'receipt');
-              console.log(`✅ [HTTP] Orden ${orden.numero_orden} marcada como impresa (receipt)`);
-            }
-          } else {
-            res.writeHead(400);
-            res.end(JSON.stringify({ error: 'Tipo inválido. Debe ser "kitchen" o "receipt"' }));
+          // Determinar printer_target
+          const printerTarget = type === 'kitchen' ? 'kitchen' : 'cashier';
+          
+          // Crear print_job en lugar de imprimir directamente
+          const { data: printJob, error: printJobError } = await supabase
+            .from('print_jobs')
+            .insert({
+              orden_id: orden.id,
+              type: type,
+              printer_target: printerTarget,
+              status: 'pending',
+              requested_by: null // No tenemos info del usuario en este endpoint
+            })
+            .select()
+            .single();
+          
+          if (printJobError) {
+            console.error(`❌ [HTTP] Error creando print_job:`, printJobError.message);
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Error al crear trabajo de impresión: ' + printJobError.message }));
             return;
           }
           
+          console.log(`✅ [HTTP] Print job creado: ${printJob.id} (tipo: ${type}, orden: ${orden.numero_orden})`);
+          
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(result || { success: false, error: 'Error desconocido' }));
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Trabajo de impresión creado en la cola',
+            print_job_id: printJob.id
+          }));
         } catch (error) {
-          console.error(`❌ [HTTP] Error imprimiendo:`, error.message);
+          console.error(`❌ [HTTP] Error procesando solicitud:`, error.message);
           res.writeHead(500);
           res.end(JSON.stringify({ error: error.message }));
         }
       }
-      // Endpoints básicos (compatibilidad - formato antiguo)
+      // Endpoints básicos (compatibilidad - formato antiguo - DEPRECADO)
+      // NOTA: Estos endpoints están deprecados. El nuevo sistema usa print_jobs.
+      // Se mantienen por compatibilidad, pero ahora crean print_jobs en lugar de imprimir directamente.
       else if (req.url === '/print/kitchen' && data.orden && data.items) {
         try {
-          const result = await printKitchenCommand(data);
+          const orden = data.orden;
           
-          // Marcar como impresa si fue exitoso
-          if (result && result.success && data.orden.id) {
-            await markOrderAsPrinted(data.orden.id, 'kitchen');
+          // Crear print_job en lugar de imprimir directamente
+          const { data: printJob, error: printJobError } = await supabase
+            .from('print_jobs')
+            .insert({
+              orden_id: orden.id,
+              type: 'kitchen',
+              printer_target: 'kitchen',
+              status: 'pending',
+              requested_by: null
+            })
+            .select()
+            .single();
+          
+          if (printJobError) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Error al crear trabajo de impresión: ' + printJobError.message }));
+            return;
           }
           
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(result));
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Trabajo de impresión creado en la cola',
+            print_job_id: printJob.id
+          }));
         } catch (error) {
           res.writeHead(500);
           res.end(JSON.stringify({ error: error.message }));
         }
       } else if (req.url === '/print/receipt' && data.orden && data.items) {
         try {
-          const result = await printCustomerReceipt(data);
+          const orden = data.orden;
           
-          // Marcar como impresa si fue exitoso
-          if (result && result.success && data.orden.id) {
-            await markOrderAsPrinted(data.orden.id, 'receipt');
+          // Crear print_job en lugar de imprimir directamente
+          const { data: printJob, error: printJobError } = await supabase
+            .from('print_jobs')
+            .insert({
+              orden_id: orden.id,
+              type: 'receipt',
+              printer_target: 'cashier',
+              status: 'pending',
+              requested_by: null
+            })
+            .select()
+            .single();
+          
+          if (printJobError) {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: 'Error al crear trabajo de impresión: ' + printJobError.message }));
+            return;
           }
           
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(result));
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: 'Trabajo de impresión creado en la cola',
+            print_job_id: printJob.id
+          }));
         } catch (error) {
           res.writeHead(500);
           res.end(JSON.stringify({ error: error.message }));

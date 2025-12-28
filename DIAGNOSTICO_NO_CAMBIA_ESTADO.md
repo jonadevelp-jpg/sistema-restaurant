@@ -175,3 +175,4 @@ UPDATE users SET role = 'mesero' WHERE id = auth.uid();
 - El estado solo se puede cambiar de `'pending'` a `'preparing'`
 - Si la orden ya está en otro estado, no puedes cambiarla a `'preparing'`
 
+

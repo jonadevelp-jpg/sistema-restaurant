@@ -157,3 +157,4 @@ Si la impresión no funciona:
 - Verifica que el estado cambió a "preparing"
 - Revisa los logs del servicio: `cd servicio-impresion-local && ver-logs.bat`
 
+

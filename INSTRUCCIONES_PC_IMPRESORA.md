@@ -182,3 +182,4 @@ Si estás trabajando desde otra PC, necesitas:
 - Acceso remoto a la PC de la impresora, O
 - Hacer los cambios directamente en esa PC
 
+

@@ -81,3 +81,4 @@ AND policyname = 'ordenes_update_own_or_admin';
 -- 2. Que el usuario tenga el rol correcto en la tabla users
 -- 3. Que el mesero_id de la orden coincida con el usuario actual (si no es admin/encargado)
 
+

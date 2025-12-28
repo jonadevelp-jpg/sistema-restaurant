@@ -167,3 +167,6 @@ Luego, cuando cambies una orden a "En Preparación", debería intentar imprimir.
 
 
 
+
+
+

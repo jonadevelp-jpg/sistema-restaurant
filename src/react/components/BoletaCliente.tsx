@@ -40,43 +40,62 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
   const [printing, setPrinting] = useState(false);
 
   const handlePrintReceipt = async () => {
-    if (printing || !orden?.id) return;
+    if (printing || !orden?.id) {
+      console.log('[BoletaCliente] handlePrintReceipt bloqueado:', { printing, ordenId: orden?.id });
+      return;
+    }
+    
+    console.log('[BoletaCliente] ========== INICIANDO IMPRESIÓN DE BOLETA ==========');
+    console.log('[BoletaCliente] Orden ID:', orden.id);
     
     setPrinting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       
+      console.log('[BoletaCliente] Token de sesión:', token ? '✅ Presente' : '❌ Faltante');
+      
       if (!token) {
         alert('No estás autenticado. Por favor, inicia sesión nuevamente.');
         return;
       }
       
-      // La API route hace el fetch al servicio local (evita Mixed Content)
-      const response = await fetch('/api/print', {
+      const requestBody = {
+        ordenId: orden.id,
+        type: 'receipt',
+        printerTarget: 'cashier',
+      };
+      
+      console.log('[BoletaCliente] Llamando a /api/print-jobs con:', requestBody);
+      
+      // Crear print_job en la cola de impresión
+      const response = await fetch('/api/print-jobs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          type: 'receipt',
-          ordenId: orden.id,
-        }),
+        body: JSON.stringify(requestBody),
       });
       
+      console.log('[BoletaCliente] Respuesta recibida:', response.status, response.statusText);
+      
       const result = await response.json();
+      console.log('[BoletaCliente] Resultado:', result);
       
       if (response.ok && result.success) {
-        alert('✅ Boleta enviada a la impresora');
+        console.log('[BoletaCliente] ✅ Print job creado exitosamente');
+        alert('✅ Boleta enviada a la cola de impresión');
       } else {
-        alert(`❌ Error: ${result.error || 'No se pudo enviar la boleta'}`);
+        console.error('[BoletaCliente] ❌ Error en respuesta:', result);
+        alert(`❌ Error: ${result.error || result.message || 'No se pudo crear el trabajo de impresión'}`);
       }
     } catch (error: any) {
-      console.error('Error enviando boleta:', error);
+      console.error('[BoletaCliente] ❌ Error enviando boleta:', error);
       alert(`❌ Error al enviar boleta: ${error.message || 'Error desconocido'}`);
     } finally {
       setPrinting(false);
+      console.log('[BoletaCliente] ========== FIN IMPRESIÓN DE BOLETA ==========');
     }
   };
 
