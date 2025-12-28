@@ -5,10 +5,13 @@
  * 
  * IMPORTANTE: La impresión ya NO está acoplada al cambio de estado.
  * Para imprimir, usar /api/print-jobs que crea trabajos en la cola de impresión.
+ * 
+ * REFACTORIZADO: Ahora usa controller/service pattern
  */
 
 import type { APIRoute } from 'astro';
-import { requireAuth, jsonResponse, errorResponse } from '../../../lib/api-helpers';
+import { requireAuth } from '../../../lib/api-helpers';
+import { OrdersController } from '../../../backend/controllers/orders.controller';
 
 export const PATCH: APIRoute = async (context) => {
   try {
@@ -19,68 +22,25 @@ export const PATCH: APIRoute = async (context) => {
     
     const ordenId = context.params.id;
     if (!ordenId) {
-      return errorResponse('ID de orden requerido', 400);
+      return new Response(
+        JSON.stringify({ success: false, error: 'ID de orden requerido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
-    
-    const body = await context.request.json();
-    const { estado, metodo_pago, total, propina_calculada, paid_at } = body;
     
     console.log('[API Ordenes] ========== ACTUALIZANDO ORDEN ==========');
     console.log('[API Ordenes] Orden ID:', ordenId);
-    console.log('[API Ordenes] Nuevo estado:', estado);
-    console.log('[API Ordenes] Body recibido:', body);
     
-    // Obtener orden actual para comparar estados
-    const { data: ordenActual, error: errorActual } = await authSupabase
-      .from('ordenes_restaurante')
-      .select('*, mesas(numero)')
-      .eq('id', ordenId)
-      .single();
-    
-    if (errorActual || !ordenActual) {
-      return errorResponse('Orden no encontrada', 404);
-    }
-    
-    const estadoAnterior = ordenActual.estado;
-    const estadoNuevo = estado || ordenActual.estado;
-    
-    // Preparar datos de actualización
-    const updateData: any = {};
-    if (estado !== undefined) updateData.estado = estado;
-    if (metodo_pago !== undefined) updateData.metodo_pago = metodo_pago;
-    if (total !== undefined) updateData.total = total;
-    if (propina_calculada !== undefined) updateData.propina_calculada = propina_calculada;
-    if (paid_at !== undefined) updateData.paid_at = paid_at;
-    
-    // Actualizar orden
-    const { data: ordenActualizada, error: updateError } = await authSupabase
-      .from('ordenes_restaurante')
-      .update(updateData)
-      .eq('id', ordenId)
-      .select('*, mesas(numero)')
-      .single();
-    
-    if (updateError) {
-      console.error('[API Ordenes] ❌ Error actualizando orden:', updateError);
-      return errorResponse('Error al actualizar orden: ' + updateError.message, 500);
-    }
-    
-    console.log('[API Ordenes] ✅ Orden actualizada correctamente');
-    console.log('[API Ordenes] Estado anterior:', estadoAnterior, '→ Estado nuevo:', estadoNuevo);
-    
-    // NOTA: La impresión ya NO está acoplada al cambio de estado.
-    // Si se necesita imprimir al cambiar el estado, el frontend debe crear
-    // un print_job llamando a /api/print-jobs después de actualizar el estado.
-    
-    return jsonResponse({ 
-      success: true, 
-      data: ordenActualizada,
-      message: 'Orden actualizada correctamente'
-    });
+    // Crear controller y delegar
+    const controller = new OrdersController(authSupabase);
+    return await controller.update(context, ordenId);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PATCH ordenes/[id]:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 

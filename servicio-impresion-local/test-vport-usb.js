@@ -120,3 +120,4 @@ console.log('3. Verifica que la impresora esté encendida');
 console.log('4. Ejecuta como Administrador');
 
 
+

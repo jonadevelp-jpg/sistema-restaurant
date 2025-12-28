@@ -1,40 +1,26 @@
+/**
+ * API Route para items del menú
+ * 
+ * REFACTORIZADO: Ahora usa controller/service pattern
+ */
+
 import type { APIRoute } from 'astro';
-import { supabase, deleteImage } from '../../lib/supabase';
-import { requireAuth, jsonResponse, errorResponse } from '../../lib/api-helpers';
+import { supabase } from '../../lib/supabase';
+import { requireAuth } from '../../lib/api-helpers';
+import { MenuItemsController } from '../../backend/controllers/menu-items.controller';
 
 // GET - Obtener todos los items del menú
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async (context) => {
   try {
-    const categoryId = url.searchParams.get('categoryId');
-    const availableOnly = url.searchParams.get('availableOnly') === 'true';
-    
-    let query = supabase
-      .from('menu_items')
-      .select(`
-        *,
-        category:categories(id, name, slug, is_active)
-      `)
-      .order('order_num', { ascending: true });
-    
-    if (categoryId) {
-      query = query.eq('category_id', parseInt(categoryId));
-    }
-    
-    if (availableOnly) {
-      query = query.eq('is_available', true);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error obteniendo items:', error);
-      return errorResponse('Error al obtener items: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+    const controller = new MenuItemsController(supabase);
+    return await controller.getAll(context);
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error en GET menu-items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
@@ -45,41 +31,15 @@ export const POST: APIRoute = async (context) => {
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await request.json();
-    const { name, description, price, category_id, image_url, is_available, is_featured, order_num } = body;
-    
-    if (!name) {
-      return errorResponse('El nombre es requerido', 400);
-    }
-    
-    const { data, error } = await authSupabase
-      .from('menu_items')
-      .insert([{
-        name,
-        description: description || null,
-        price: price || 0,
-        category_id: category_id || null,
-        image_url: image_url || null,
-        is_available: is_available ?? true,
-        is_featured: is_featured ?? false,
-        order_num: order_num || 0,
-      }])
-      .select(`
-        *,
-        category:categories(id, name, slug)
-      `)
-      .single();
-    
-    if (error) {
-      console.error('Error creando item:', error);
-      return errorResponse('Error al crear item: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data }, 201);
+    const controller = new MenuItemsController(authSupabase);
+    return await controller.create(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en POST menu-items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
@@ -90,92 +50,34 @@ export const PUT: APIRoute = async (context) => {
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { id, name, description, price, category_id, image_url, is_available, is_featured, order_num } = body;
-    
-    if (!id) {
-      return errorResponse('ID del item requerido', 400);
-    }
-    
-    // Si se está cambiando la imagen, eliminar la anterior
-    if (image_url !== undefined) {
-      const { data: currentItem } = await authSupabase
-        .from('menu_items')
-        .select('image_url')
-        .eq('id', id)
-        .single();
-      
-      if (currentItem?.image_url && currentItem.image_url !== image_url) {
-        await deleteImage(currentItem.image_url);
-      }
-    }
-    
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (price !== undefined) updateData.price = price;
-    if (category_id !== undefined) updateData.category_id = category_id;
-    if (image_url !== undefined) updateData.image_url = image_url;
-    if (is_available !== undefined) updateData.is_available = is_available;
-    if (is_featured !== undefined) updateData.is_featured = is_featured;
-    if (order_num !== undefined) updateData.order_num = order_num;
-    
-    const { data, error } = await authSupabase
-      .from('menu_items')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
-        *,
-        category:categories(id, name, slug)
-      `)
-      .single();
-    
-    if (error) {
-      console.error('Error actualizando item:', error);
-      return errorResponse('Error al actualizar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+    const controller = new MenuItemsController(authSupabase);
+    return await controller.update(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PUT menu-items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
-// PATCH - Actualizar parcialmente (toggle disponible, destacado, etc.)
+// PATCH - Actualizar parcialmente
 export const PATCH: APIRoute = async (context) => {
   try {
     const authResult = await requireAuth(context);
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { id, ...updates } = body;
-    
-    if (!id) {
-      return errorResponse('ID del item requerido', 400);
-    }
-    
-    updates.updated_at = new Date().toISOString();
-    
-    const { data, error } = await authSupabase
-      .from('menu_items')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error actualizando item:', error);
-      return errorResponse('Error al actualizar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+    const controller = new MenuItemsController(authSupabase);
+    return await controller.patch(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PATCH menu-items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
@@ -186,39 +88,14 @@ export const DELETE: APIRoute = async (context) => {
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { id } = body;
-    
-    if (!id) {
-      return errorResponse('ID del item requerido', 400);
-    }
-    
-    // Obtener item para eliminar su imagen
-    const { data: item } = await authSupabase
-      .from('menu_items')
-      .select('image_url')
-      .eq('id', id)
-      .single();
-    
-    if (item?.image_url) {
-      await deleteImage(item.image_url);
-    }
-    
-    const { error } = await authSupabase
-      .from('menu_items')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('Error eliminando item:', error);
-      return errorResponse('Error al eliminar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, message: 'Item eliminado' });
+    const controller = new MenuItemsController(authSupabase);
+    return await controller.delete(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en DELETE menu-items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
-

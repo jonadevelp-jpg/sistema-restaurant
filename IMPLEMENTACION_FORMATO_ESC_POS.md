@@ -145,3 +145,4 @@ Trunca texto agregando "..." si es necesario:
 - Los emojis (como 🕌) pueden no imprimirse correctamente en algunas impresoras
 - El ancho de 32 caracteres es estándar para impresoras térmicas de 58mm
 
+

@@ -109,3 +109,4 @@ AND policyname = 'mesas_update_admin';
 -- ✅ Meseros, encargados y admins pueden actualizar mesas (liberar/ocupar)
 -- ✅ Esto permite que los meseros cancelen órdenes y liberen mesas desde el POS
 
+

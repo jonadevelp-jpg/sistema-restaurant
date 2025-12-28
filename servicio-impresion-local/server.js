@@ -475,6 +475,7 @@ async function pollForPendingOrders() {
   
   if (!supabase) {
     console.warn('⚠️  Supabase no configurado, saltando polling');
+    console.warn('   Verifica que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén en .env');
     return;
   }
   
@@ -491,6 +492,10 @@ async function pollForPendingOrders() {
     
     if (jobsError) {
       console.error('❌ Error consultando print_jobs:', jobsError.message);
+      console.error('   Verifica:');
+      console.error('   1. Que la tabla print_jobs exista en Supabase');
+      console.error('   2. Que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY sean correctos');
+      console.error('   3. Que el servicio tenga permisos para leer print_jobs');
     } else if (pendingJobs && pendingJobs.length > 0) {
       console.log(`🖨️  Encontrados ${pendingJobs.length} trabajo(s) de impresión pendiente(s)`);
       
@@ -572,9 +577,12 @@ async function pollForPendingOrders() {
           await markPrintJobAsError(job.id, error.message);
         }
       }
-    } else if (Math.random() < 0.05) {
-      // Loggear ocasionalmente para confirmar que el polling está activo
-      console.log(`🔍 [Polling activo] No hay trabajos de impresión pendientes`);
+    } else {
+      // Loggear cada 20 ciclos para confirmar que el polling está activo (cada ~60 segundos si intervalo es 3s)
+      const cycleCount = Math.floor(Date.now() / POLLING_INTERVAL_MS);
+      if (cycleCount % 20 === 0) {
+        console.log(`🔍 [Polling activo] No hay trabajos de impresión pendientes (ciclo ${cycleCount})`);
+      }
     }
   } catch (error) {
     console.error('❌ Error en polling:', error.message);
@@ -591,6 +599,7 @@ function startPolling() {
   
   if (!supabase) {
     console.log('⏸️  Polling deshabilitado (Supabase no configurado)');
+    console.log('   Verifica que SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén en .env');
     return;
   }
   
@@ -598,13 +607,17 @@ function startPolling() {
   console.log(`   - Consultará print_jobs con status='pending'`);
   console.log(`   - Procesará trabajos de impresión según su tipo (kitchen/receipt/payment)`);
   console.log(`   - Marcará como 'printed' o 'error' según el resultado`);
+  console.log(`   ✅ Polling iniciado correctamente`);
   
   // Ejecutar inmediatamente el primer ciclo, luego continuar con el intervalo
+  console.log(`🔍 Ejecutando primer ciclo de polling...`);
   pollForPendingOrders();
   
   pollingInterval = setInterval(() => {
     pollForPendingOrders();
   }, POLLING_INTERVAL_MS);
+  
+  console.log(`✅ Polling configurado. Próximo ciclo en ${POLLING_INTERVAL_MS}ms`);
 }
 
 function stopPolling() {
@@ -797,6 +810,16 @@ server.listen(PORT, () => {
 });
 
 // Iniciar polling
+console.log('\n🚀 ========== INICIANDO SERVICIO ==========');
+console.log(`📅 Fecha/Hora: ${new Date().toLocaleString('es-CL')}`);
+console.log(`📁 Directorio: ${__dirname}`);
+console.log(`🖥️  Node.js: ${process.version}`);
+console.log(`🔄 Polling: ${POLLING_ENABLED ? 'HABILITADO' : 'DESHABILITADO'}`);
+console.log(`📊 Supabase: ${supabase ? 'CONFIGURADO' : 'NO CONFIGURADO'}`);
+console.log(`🖨️  Impresora Cocina: ${PRINTER_KITCHEN_NAME || 'NO CONFIGURADA'}`);
+console.log(`🖨️  Impresora Caja: ${PRINTER_CASHIER_NAME || 'NO CONFIGURADA'}`);
+console.log('========================================\n');
+
 startPolling();
 
 // Manejo de cierre graceful

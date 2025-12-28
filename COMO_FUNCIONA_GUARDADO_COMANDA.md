@@ -158,3 +158,4 @@ Si la impresión no funciona:
 - Revisa los logs del servicio: `cd servicio-impresion-local && ver-logs.bat`
 
 
+

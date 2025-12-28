@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Category } from '@/lib/supabase';
+import type { Category } from '@/shared/types';
 
 export default function CategoryManager() {
   const [categories, setCategories] = useState<Category[]>([]);

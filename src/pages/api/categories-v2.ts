@@ -1,32 +1,26 @@
+/**
+ * API Route para categorías
+ * 
+ * REFACTORIZADO: Ahora usa controller/service pattern
+ */
+
 import type { APIRoute } from 'astro';
 import { supabase } from '../../lib/supabase';
-import { requireAuth, jsonResponse, errorResponse } from '../../lib/api-helpers';
+import { requireAuth } from '../../lib/api-helpers';
+import { CategoriesController } from '../../backend/controllers/categories.controller';
 
 // GET - Obtener todas las categorías
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async (context) => {
   try {
-    const onlyActive = url.searchParams.get('onlyActive') === 'true';
-    
-    let query = supabase
-      .from('categories')
-      .select('*')
-      .order('order_num', { ascending: true });
-    
-    if (onlyActive) {
-      query = query.eq('is_active', true);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error obteniendo categorías:', error);
-      return errorResponse('Error al obtener categorías: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+    const controller = new CategoriesController(supabase);
+    return await controller.getAll(context);
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error en GET categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
@@ -37,46 +31,15 @@ export const POST: APIRoute = async (context) => {
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { name, slug, description, order_num, is_active } = body;
-    
-    if (!name) {
-      return errorResponse('El nombre es requerido', 400);
-    }
-    
-    // Generar slug si no se proporciona
-    const finalSlug = slug || name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    
-    const { data, error } = await authSupabase
-      .from('categories')
-      .insert([{
-        name,
-        slug: finalSlug,
-        description: description || null,
-        order_num: order_num || 0,
-        is_active: is_active ?? true,
-      }])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creando categoría:', error);
-      if (error.code === '23505') {
-        return errorResponse('Ya existe una categoría con ese slug', 400);
-      }
-      return errorResponse('Error al crear categoría: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data }, 201);
+    const controller = new CategoriesController(authSupabase);
+    return await controller.create(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en POST categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
@@ -87,71 +50,34 @@ export const PUT: APIRoute = async (context) => {
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { id, name, slug, description, order_num, is_active } = body;
-    
-    if (!id) {
-      return errorResponse('ID de categoría requerido', 400);
-    }
-    
-    const updateData: any = {};
-    if (name !== undefined) updateData.name = name;
-    if (slug !== undefined) updateData.slug = slug;
-    if (description !== undefined) updateData.description = description;
-    if (order_num !== undefined) updateData.order_num = order_num;
-    if (is_active !== undefined) updateData.is_active = is_active;
-    
-    const { data, error } = await authSupabase
-      .from('categories')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error actualizando categoría:', error);
-      return errorResponse('Error al actualizar categoría: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+    const controller = new CategoriesController(authSupabase);
+    return await controller.update(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PUT categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
-// PATCH - Actualizar parcialmente (ej: toggle is_active)
+// PATCH - Actualizar parcialmente
 export const PATCH: APIRoute = async (context) => {
   try {
     const authResult = await requireAuth(context);
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { id, ...updates } = body;
-    
-    if (!id) {
-      return errorResponse('ID de categoría requerido', 400);
-    }
-    
-    const { data, error } = await authSupabase
-      .from('categories')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error actualizando categoría:', error);
-      return errorResponse('Error al actualizar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data });
+    const controller = new CategoriesController(authSupabase);
+    return await controller.patch(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en PATCH categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 
@@ -162,35 +88,15 @@ export const DELETE: APIRoute = async (context) => {
     if (authResult instanceof Response) return authResult;
     const { supabase: authSupabase } = authResult;
     
-    const body = await context.request.json();
-    const { id } = body;
-    
-    if (!id) {
-      return errorResponse('ID de categoría requerido', 400);
-    }
-    
-    // Primero, actualizar items que tengan esta categoría (ponerlos sin categoría)
-    await authSupabase
-      .from('menu_items')
-      .update({ category_id: null })
-      .eq('category_id', id);
-    
-    // Luego eliminar la categoría
-    const { error } = await authSupabase
-      .from('categories')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('Error eliminando categoría:', error);
-      return errorResponse('Error al eliminar: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, message: 'Categoría eliminada' });
+    const controller = new CategoriesController(authSupabase);
+    return await controller.delete(context);
   } catch (error: any) {
     if (error instanceof Response) return error;
     console.error('Error en DELETE categories:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 

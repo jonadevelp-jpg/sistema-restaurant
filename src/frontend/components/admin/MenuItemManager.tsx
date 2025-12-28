@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ImageUpload from './ImageUpload';
 import { supabase } from '@/lib/supabase';
-import type { Category, MenuItem } from '@/lib/supabase';
+import type { Category, MenuItem } from '@/shared/types';
 
 interface MenuItemWithCategory extends MenuItem {
   category?: Category | null;

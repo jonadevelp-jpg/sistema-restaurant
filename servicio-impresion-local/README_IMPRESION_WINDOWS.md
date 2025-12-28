@@ -193,3 +193,4 @@ Si tienes problemas:
 4. Verifica que Supabase esté accesible
 
 
+

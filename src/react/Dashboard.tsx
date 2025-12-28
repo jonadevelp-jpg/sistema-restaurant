@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import KpiCard from './components/KpiCard';
-import { formatCLP } from '@/lib/currency';
-import { obtenerEstadisticasPropinas } from '@/lib/tips';
+import { formatCLP } from '@/frontend/utils/currency';
+import { obtenerEstadisticasPropinas } from '@/backend/services/tips.service';
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);

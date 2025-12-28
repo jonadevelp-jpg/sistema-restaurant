@@ -118,3 +118,4 @@ Después de cambiar el `.env`, verifica:
 4. Si nada funciona, considera usar impresión RAW directa
 
 
+

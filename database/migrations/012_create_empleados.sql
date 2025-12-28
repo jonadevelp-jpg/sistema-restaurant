@@ -139,3 +139,4 @@ CREATE POLICY "propinas_delete_admin"
 
 
 
+

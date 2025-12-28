@@ -156,3 +156,4 @@ PRINTER_KITCHEN_PATH=COM3
 **El código mejorado ahora intenta múltiples métodos automáticamente, así que debería funcionar incluso si el puerto no es exactamente el configurado.** 🎯
 
 
+

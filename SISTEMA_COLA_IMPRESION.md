@@ -103,3 +103,4 @@ Ejecutar en Supabase SQL Editor:
 3. Probar los botones de impresión desde el frontend
 4. Verificar que el polling procese los `print_jobs` correctamente
 
+

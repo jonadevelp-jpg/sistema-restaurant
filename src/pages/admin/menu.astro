@@ -1,8 +1,8 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import CategoryManager from '../../react/components/CategoryManager';
-import MenuItemManager from '../../react/components/MenuItemManager';
-import MenuAuthGuard from '../../react/components/MenuAuthGuard';
+import CategoryManager from '../../frontend/components/admin/CategoryManager';
+import MenuItemManager from '../../frontend/components/admin/MenuItemManager';
+import MenuAuthGuard from '../../frontend/components/admin/MenuAuthGuard';
 
 // Obtener tab activo de la URL
 const activeTab = Astro.url.searchParams.get('tab') || 'items';

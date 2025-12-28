@@ -1,40 +1,26 @@
+/**
+ * API Route para obtener items del menú (público)
+ * 
+ * REFACTORIZADO: Reutiliza MenuItemsController
+ * Esta ruta es pública (sin autenticación) para el menú digital
+ */
+
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
-import { jsonResponse, errorResponse } from '../../../lib/api-helpers';
+import { MenuItemsController } from '../../../backend/controllers/menu-items.controller';
 
-// GET - Obtener todos los items del menú
-export const GET: APIRoute = async ({ url }) => {
+// GET - Obtener todos los items del menú (público)
+export const GET: APIRoute = async (context) => {
   try {
-    const categoryId = url.searchParams.get('categoryId');
-    const availableOnly = url.searchParams.get('availableOnly') === 'true';
-    
-    let query = supabase
-      .from('menu_items')
-      .select(`
-        *,
-        category:categories(id, name, slug, is_active)
-      `)
-      .order('order_num', { ascending: true });
-    
-    if (categoryId) {
-      query = query.eq('category_id', parseInt(categoryId));
-    }
-    
-    if (availableOnly) {
-      query = query.eq('is_available', true);
-    }
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error obteniendo items:', error);
-      return errorResponse('Error al obtener items: ' + error.message, 500);
-    }
-    
-    return jsonResponse({ success: true, data: data || [] });
+    const controller = new MenuItemsController(supabase);
+    return await controller.getAll(context);
   } catch (error: any) {
+    if (error instanceof Response) return error;
     console.error('Error en GET menu/items:', error);
-    return errorResponse('Error interno: ' + (error.message || 'Desconocido'), 500);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Error interno: ' + (error.message || 'Desconocido') }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 };
 

@@ -107,3 +107,4 @@ Con esta configuración, cuando:
 El servicio detectará automáticamente las órdenes pendientes y las imprimirá.
 
 
+

@@ -167,3 +167,4 @@ printRaw() → Windows Spooler → Impresora POS58
 - [ ] Verificar separadores
 - [ ] Documentar cambios
 
+

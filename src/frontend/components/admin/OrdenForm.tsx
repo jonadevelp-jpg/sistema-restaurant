@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { formatCLP } from '@/lib/currency';
-import { distribuirPropinas } from '@/lib/tips';
+import { formatCLP } from '@/frontend/utils/currency';
+import { distribuirPropinas } from '@/backend/services/tips.service';
 import ComandaCocina from './ComandaCocina';
 import BoletaCliente from './BoletaCliente';
 import ItemPersonalizationModal from './ItemPersonalizationModal';

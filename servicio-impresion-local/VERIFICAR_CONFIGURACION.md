@@ -60,3 +60,4 @@ Busca:
 Los errores anteriores con `vport-usb:` eran de **antes del reinicio**. El servicio ahora está configurado para usar `POS58`, pero necesita que configures Supabase correctamente para que el polling funcione.
 
 
+

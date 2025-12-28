@@ -129,3 +129,4 @@ Después de aplicar estos cambios y usar el nombre correcto de la impresora o el
 El polling debería funcionar correctamente y las órdenes deberían imprimirse automáticamente.
 
 
+

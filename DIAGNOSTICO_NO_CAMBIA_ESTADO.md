@@ -176,3 +176,4 @@ UPDATE users SET role = 'mesero' WHERE id = auth.uid();
 - Si la orden ya está en otro estado, no puedes cambiarla a `'preparing'`
 
 
+

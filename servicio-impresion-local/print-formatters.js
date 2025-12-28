@@ -72,6 +72,7 @@ function formatOrderInfo(formatter, orden) {
 
 /**
  * Formatea items de comanda (sin precios)
+ * Optimizado para cocina: títulos grandes, detalles medianos/grandes
  */
 function formatKitchenItems(formatter, items) {
   // Agrupar items por categoría
@@ -84,41 +85,81 @@ function formatKitchenItems(formatter, items) {
   
   Object.entries(itemsPorCategoria).forEach(([categoriaId, categoriaItems]) => {
     categoriaItems.forEach((item) => {
-      const nombre = truncateText(item.menu_item?.name || 'Item', WIDTH - 5).toUpperCase();
-      formatter.textLine(`${item.cantidad}x ${nombre}`);
+      const nombre = (item.menu_item?.name || 'Item').toUpperCase();
       
-      // Personalización
+      // TÍTULO DEL ITEM: Grande y en negrita
+      // sizeDoubleHeight() mantiene el ancho de 32 caracteres, solo aumenta la altura
+      const maxWidthTitle = WIDTH - 5; // Dejamos margen para "2x " al inicio
+      const nombreTruncado = truncateText(nombre, maxWidthTitle);
+      
+      formatter
+        .alignLeft()
+        .sizeDoubleHeight()  // Semi grande (doble alto, ancho normal)
+        .boldOn()
+        .textLine(`${item.cantidad}x ${nombreTruncado}`)
+        .boldOff()
+        .sizeNormal();
+      
+      // DETALLES: Medianos/grandes y en negrita
       if (item.notas) {
         try {
           const personalization = JSON.parse(item.notas);
           const parts = [];
           
-          if (personalization.agregado) parts.push(`Agregado: ${personalization.agregado}`);
+          if (personalization.agregado) {
+            parts.push({ label: 'AGREGADO', value: personalization.agregado });
+          }
           if (personalization.salsas?.length > 0) {
-            parts.push(`Salsa${personalization.salsas.length > 1 ? 's' : ''}: ${personalization.salsas.join(', ')}`);
+            const salsasText = personalization.salsas.join(', ');
+            parts.push({ 
+              label: personalization.salsas.length > 1 ? 'SALSAS' : 'SALSA', 
+              value: salsasText 
+            });
           }
           if (personalization.sinIngredientes?.length > 0) {
-            parts.push(`Sin: ${personalization.sinIngredientes.join(', ')}`);
+            const sinText = personalization.sinIngredientes.join(', ');
+            parts.push({ label: 'SIN', value: sinText });
           }
           if (personalization.bebidas?.length > 0) {
             const bebidasText = personalization.bebidas.map(b => {
               if (b.sabor) return `${b.nombre} (${b.sabor})`;
               return b.nombre;
             }).join(', ');
-            parts.push(`Bebida${personalization.bebidas.length > 1 ? 's' : ''}: ${bebidasText}`);
+            parts.push({ 
+              label: personalization.bebidas.length > 1 ? 'BEBIDAS' : 'BEBIDA', 
+              value: bebidasText 
+            });
           }
-          if (personalization.detalles) parts.push(`Nota: ${personalization.detalles}`);
+          if (personalization.detalles) {
+            parts.push({ label: 'NOTA', value: personalization.detalles });
+          }
           
           if (parts.length > 0) {
             parts.forEach(part => {
-              const nota = truncateText(`  ${part}`, WIDTH);
-              formatter.textLine(nota);
+              // Detalles en tamaño medio (doble alto) y negrita
+              // sizeDoubleHeight() mantiene el ancho de 32 caracteres
+              const labelText = `${part.label}:`;
+              const maxWidthValue = WIDTH - labelText.length - 3; // Margen para "  " y espacio
+              const valueText = truncateText(part.value, maxWidthValue);
+              
+              formatter
+                .alignLeft()
+                .sizeDoubleHeight()  // Doble alto, ancho normal
+                .boldOn()
+                .textLine(`  ${labelText} ${valueText}`)
+                .boldOff()
+                .sizeNormal();
             });
           }
         } catch {
           // Si no es JSON, usar como texto simple
-          const nota = truncateText(`  ${item.notas}`, WIDTH);
-          formatter.textLine(nota);
+          formatter
+            .alignLeft()
+            .sizeDoubleHeight()
+            .boldOn()
+            .textLine(`  ${truncateText(item.notas, WIDTH - 2)}`)
+            .boldOff()
+            .sizeNormal();
         }
       }
       
@@ -239,30 +280,17 @@ function formatReceiptFooter(formatter) {
 
 /**
  * Formatea el pie de página de comanda
+ * SOLO información básica, SIN totales ni precios (para cocina)
  */
 function formatKitchenFooter(formatter, items, orden) {
   const totalItems = items.reduce((sum, item) => sum + item.cantidad, 0);
   
-  // Calcular total de la orden
-  const totalOrden = orden.total || items.reduce((sum, item) => sum + item.subtotal, 0);
-  
-  // Calcular propina (10% del total)
-  const propina = totalOrden * 0.1;
-  
   formatter
-    .separator('-', WIDTH)
+    .separator('=', WIDTH)
     .alignLeft()
-    .textLine(`Total Items: ${totalItems}`)
-    .textLine(`Subtotal: ${formatPrice(totalOrden)}`)
-    .separator('-', WIDTH)
-    .alignCenter()
-    .sizeDouble()
-    .boldOn()
-    .textLine('PROPINA 10%')
-    .textLine(formatPrice(propina))
-    .boldOff()
     .sizeNormal()
-    .separator('-', WIDTH)
+    .textLine(`Total de items: ${totalItems}`)
+    .separator('=', WIDTH)
     .alignCenter()
     .textLine(new Date().toLocaleString('es-CL'))
     .feed(2)
