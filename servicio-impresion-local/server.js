@@ -16,6 +16,18 @@ const path = require('path');
 const http = require('http');
 const { createClient } = require('@supabase/supabase-js');
 const { listPrinters, printerExists, ESCPOSFormatter, printRaw } = require('./printer-module');
+const {
+  formatReceiptHeader,
+  formatKitchenHeader,
+  formatOrderInfo,
+  formatKitchenItems,
+  formatReceiptItems,
+  formatReceiptTotals,
+  formatPaymentInfo,
+  formatReceiptFooter,
+  formatKitchenFooter,
+  formatGeneralNote
+} = require('./print-formatters');
 
 // Cargar .env manualmente (más robusto que dotenv)
 const envPath = path.join(__dirname, '.env');
@@ -261,35 +273,6 @@ async function incrementPrintAttempts(ordenId, type) {
 // FUNCIONES DE IMPRESIÓN
 // ============================================
 
-function formatPersonalization(notas) {
-  if (!notas) return '';
-  
-  try {
-    const personalization = JSON.parse(notas);
-    const parts = [];
-    
-    if (personalization.agregado) parts.push(`Agregado: ${personalization.agregado}`);
-    if (personalization.salsas?.length > 0) {
-      parts.push(`Salsa${personalization.salsas.length > 1 ? 's' : ''}: ${personalization.salsas.join(', ')}`);
-    }
-    if (personalization.sinIngredientes?.length > 0) {
-      parts.push(`Sin: ${personalization.sinIngredientes.join(', ')}`);
-    }
-    if (personalization.bebidas?.length > 0) {
-      const bebidasText = personalization.bebidas.map(b => {
-        if (b.sabor) return `${b.nombre} (${b.sabor})`;
-        return b.nombre;
-      }).join(', ');
-      parts.push(`Bebida${personalization.bebidas.length > 1 ? 's' : ''}: ${bebidasText}`);
-    }
-    if (personalization.detalles) parts.push(`Nota: ${personalization.detalles}`);
-    
-    return parts.join(' | ');
-  } catch {
-    return notas;
-  }
-}
-
 async function printKitchenCommand(data) {
   // Aceptar tanto { orden, items } como { orden: {...}, items: [...] }
   const orden = data.orden || data;
@@ -315,58 +298,19 @@ async function printKitchenCommand(data) {
     formatter.init();
     
     // Encabezado
-    formatter
-      .alignCenter()
-      .sizeDouble()
-      .text('COMANDA COCINA')
-      .sizeNormal()
-      .text('================')
-      .alignLeft()
-      .feed(1)
-      .text(`Orden: ${orden.numero_orden}`)
-      .text(`Mesa: ${orden.mesas?.numero || 'N/A'}`)
-      .text(`Hora: ${new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
-      .separator();
+    formatKitchenHeader(formatter);
     
-    // Items agrupados por categoría
-    const itemsPorCategoria = items.reduce((acc, item) => {
-      const categoria = item.menu_item?.category_id || 0;
-      if (!acc[categoria]) acc[categoria] = [];
-      acc[categoria].push(item);
-      return acc;
-    }, {});
+    // Información de orden
+    formatOrderInfo(formatter, orden);
     
-    Object.entries(itemsPorCategoria).forEach(([categoriaId, categoriaItems]) => {
-      categoriaItems.forEach((item) => {
-        const personalization = formatPersonalization(item.notas);
-        
-        formatter.text(`${item.cantidad}x ${item.menu_item?.name || 'Item'}`.toUpperCase());
-        
-        if (personalization) {
-          formatter.text(`  ${personalization}`);
-        }
-        
-        formatter.feed(1);
-      });
-    });
+    // Items
+    formatKitchenItems(formatter, items);
     
     // Nota general
-    if (orden.nota) {
-      formatter
-        .separator()
-        .text('NOTA GENERAL:')
-        .text(orden.nota)
-        .feed(1);
-    }
+    formatGeneralNote(formatter, orden.nota);
     
     // Pie
-    formatter
-      .separator()
-      .alignCenter()
-      .text(`Total Items: ${items.reduce((sum, item) => sum + item.cantidad, 0)}`)
-      .text(new Date().toLocaleString('es-CL'))
-      .feed(2)
-      .cut();
+    formatKitchenFooter(formatter, items);
     
     // Imprimir
     const printData = formatter.getBuffer();
@@ -399,97 +343,28 @@ async function printCustomerReceipt(data) {
   console.log(`🧾 Impresora: ${PRINTER_CASHIER_NAME}`);
   
   try {
-    // Calcular desglose IVA
-    const calcularDesgloseIVA = (precioConIVA) => {
-      const precioSinIVA = precioConIVA / 1.19;
-      const iva = precioConIVA - precioSinIVA;
-      return { sinIVA: precioSinIVA, iva, conIVA: precioConIVA };
-    };
-    
-    const subtotalSinIVA = items.reduce((sum, item) => {
-      const desglose = calcularDesgloseIVA(item.subtotal);
-      return sum + desglose.sinIVA;
-    }, 0);
-    
-    const ivaTotal = items.reduce((sum, item) => {
-      const desglose = calcularDesgloseIVA(item.subtotal);
-      return sum + desglose.iva;
-    }, 0);
-    
-    const total = items.reduce((sum, item) => sum + item.subtotal, 0);
-    
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: 'CLP',
-        minimumFractionDigits: 0,
-      }).format(Math.round(price));
-    };
-    
     const formatter = new ESCPOSFormatter();
     
     // Inicializar impresora
     formatter.init();
     
-    // Encabezado
-    formatter
-      .alignCenter()
-      .sizeDouble()
-      .text('GOURMET ARABE SPA')
-      .sizeNormal()
-      .text('RUT: 77669643-9')
-      .text('Providencia 1388 Local 49')
-      .text('Celular: 939459286')
-      .separator()
-      .alignLeft()
-      .text(`Orden: ${orden.numero_orden}`)
-      .text(`Mesa: ${orden.mesas?.numero || 'Para Llevar'}`)
-      .text(`Fecha: ${new Date(orden.created_at).toLocaleDateString('es-CL')}`)
-      .text(`Hora: ${new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
-      .separator()
-      .feed(1);
+    // Encabezado del local
+    formatReceiptHeader(formatter);
     
-    // Items
-    formatter
-      .text('Cant. Descripcion        Total')
-      .text('----------------');
+    // Información de orden
+    formatOrderInfo(formatter, orden);
     
-    items.forEach((item) => {
-      const desglose = calcularDesgloseIVA(item.subtotal);
-      const nombre = (item.menu_item?.name || 'Item').substring(0, 20);
-      const cantidad = item.cantidad.toString().padStart(2);
-      const precio = formatPrice(desglose.sinIVA).padStart(10);
-      
-      formatter.text(`${cantidad}  ${nombre.padEnd(20)} ${precio}`);
-    });
+    // Items con precios
+    formatReceiptItems(formatter, items);
     
     // Totales
-    formatter
-      .separator()
-      .text(`Monto Neto:     ${formatPrice(subtotalSinIVA).padStart(15)}`)
-      .text(`IVA (19%):      ${formatPrice(ivaTotal).padStart(15)}`)
-      .separator()
-      .boldOn()
-      .text(`TOTAL:          ${formatPrice(total).padStart(15)}`)
-      .boldOff();
+    formatReceiptTotals(formatter, items);
     
-    // Método de pago
-    if (orden.metodo_pago) {
-      formatter
-        .separator()
-        .text(`Metodo de Pago: ${orden.metodo_pago}`)
-        .text(`Pagado: ${orden.paid_at ? new Date(orden.paid_at).toLocaleString('es-CL') : 'N/A'}`);
-    }
+    // Información de pago
+    formatPaymentInfo(formatter, orden);
     
     // Pie
-    formatter
-      .separator()
-      .alignCenter()
-      .text('¡Gracias por su visita!')
-      .text('Carne Halal Certificada 🕌')
-      .text(new Date().toLocaleString('es-CL'))
-      .feed(2)
-      .cut();
+    formatReceiptFooter(formatter);
     
     // Imprimir
     const printData = formatter.getBuffer();

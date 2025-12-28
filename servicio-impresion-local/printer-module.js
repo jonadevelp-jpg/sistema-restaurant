@@ -131,7 +131,13 @@ class ESCPOSFormatter {
       // Convertir UTF-8 a Latin1 para compatibilidad con impresoras ESC/POS
       // Esto evita que caracteres especiales se impriman como números
       try {
-        const latin1Str = Buffer.from(str, 'utf8').toString('latin1');
+        // Reemplazar caracteres especiales que pueden causar problemas
+        let cleanStr = str
+          .replace(/[^\x00-\xFF]/g, '?') // Reemplazar caracteres fuera de Latin1
+          .replace(/\r\n/g, '\n') // Normalizar saltos de línea
+          .replace(/\r/g, '\n');
+        
+        const latin1Str = Buffer.from(cleanStr, 'utf8').toString('latin1');
         this.buffer = Buffer.concat([this.buffer, Buffer.from(latin1Str, 'latin1')]);
       } catch (error) {
         // Si falla la conversión, usar ASCII directamente
@@ -139,6 +145,13 @@ class ESCPOSFormatter {
         this.buffer = Buffer.concat([this.buffer, Buffer.from(asciiStr, 'ascii')]);
       }
     }
+    return this;
+  }
+  
+  // Agregar texto con salto de línea automático
+  textLine(str) {
+    this.text(str);
+    this.feed(1);
     return this;
   }
 
@@ -151,9 +164,43 @@ class ESCPOSFormatter {
     return this;
   }
 
-  // Línea separadora
-  separator() {
-    this.text('----------------');
+  // Línea separadora (32 caracteres por defecto para POS58)
+  separator(char = '-', width = 32) {
+    const line = char.repeat(width);
+    this.text(line);
+    this.feed(1);
+    return this;
+  }
+  
+  // Texto con ancho fijo y alineación
+  textFixedWidth(text, width = 32, align = 'left') {
+    if (!text) text = '';
+    
+    // Convertir a string y truncar si es muy largo
+    let textStr = String(text);
+    if (textStr.length > width) {
+      textStr = textStr.substring(0, width - 3) + '...';
+    }
+    
+    // Aplicar alineación
+    let padded;
+    if (align === 'left') {
+      padded = textStr.padEnd(width);
+    } else if (align === 'right') {
+      padded = textStr.padStart(width);
+    } else if (align === 'center') {
+      const padding = Math.floor((width - textStr.length) / 2);
+      padded = ' '.repeat(padding) + textStr + ' '.repeat(width - textStr.length - padding);
+    } else {
+      padded = textStr.padEnd(width);
+    }
+    
+    this.text(padded);
+    return this;
+  }
+  
+  // Línea vacía
+  blankLine() {
     this.feed(1);
     return this;
   }
