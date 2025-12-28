@@ -687,8 +687,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         const token = session?.access_token;
         
         if (token) {
-          // Paso 1: Obtener datos de la API
-          const apiResponse = await fetch('/api/print', {
+          // La API route hace el fetch al servicio local (evita Mixed Content)
+          const printResponse = await fetch('/api/print', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -700,28 +700,10 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
             }),
           });
           
-          const apiResult = await apiResponse.json();
-          
-          if (apiResponse.ok && apiResult.success) {
-            // Paso 2: Enviar directamente al servicio local desde el navegador
-            const printResponse = await fetch(apiResult.printServiceUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiResult.printServiceToken}`,
-              },
-              body: JSON.stringify({
-                type: apiResult.type,
-                orden: apiResult.orden,
-                items: apiResult.items,
-              }),
-            });
-            
-            if (printResponse.ok) {
-              console.log('[OrdenForm] ✅ Boleta impresa automáticamente al pagar');
-            } else {
-              console.warn('[OrdenForm] ⚠️ No se pudo imprimir boleta automáticamente, pero el pago fue exitoso');
-            }
+          if (printResponse.ok) {
+            console.log('[OrdenForm] ✅ Boleta impresa automáticamente al pagar');
+          } else {
+            console.warn('[OrdenForm] ⚠️ No se pudo imprimir boleta automáticamente, pero el pago fue exitoso');
           }
         }
       } catch (printError) {

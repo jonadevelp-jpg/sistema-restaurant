@@ -51,8 +51,8 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
         return;
       }
       
-      // Paso 1: Obtener datos de la API
-      const apiResponse = await fetch('/api/print', {
+      // La API route hace el fetch al servicio local (evita Mixed Content)
+      const response = await fetch('/api/print', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,33 +64,12 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
         }),
       });
       
-      const apiResult = await apiResponse.json();
+      const result = await response.json();
       
-      if (!apiResponse.ok || !apiResult.success) {
-        alert(`❌ Error: ${apiResult.error || 'No se pudo obtener datos de impresión'}`);
-        return;
-      }
-      
-      // Paso 2: Enviar directamente al servicio local desde el navegador
-      const printResponse = await fetch(apiResult.printServiceUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiResult.printServiceToken}`,
-        },
-        body: JSON.stringify({
-          type: apiResult.type,
-          orden: apiResult.orden,
-          items: apiResult.items,
-        }),
-      });
-      
-      const printResult = await printResponse.json();
-      
-      if (printResponse.ok && printResult.success) {
+      if (response.ok && result.success) {
         alert('✅ Comanda enviada a la impresora de cocina');
       } else {
-        alert(`❌ Error: ${printResult.error || 'No se pudo enviar la comanda al servicio local'}`);
+        alert(`❌ Error: ${result.error || 'No se pudo enviar la comanda'}`);
       }
     } catch (error: any) {
       console.error('Error enviando comanda:', error);
