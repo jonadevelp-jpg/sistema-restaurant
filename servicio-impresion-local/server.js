@@ -239,16 +239,37 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Inicializar cliente de Supabase (solo si está configurado)
 let supabase = null;
+console.log('🔍 Verificando configuración de Supabase...');
+console.log(`   SUPABASE_URL: ${SUPABASE_URL ? SUPABASE_URL.substring(0, 30) + '...' : 'NO CONFIGURADO'}`);
+console.log(`   SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...' : 'NO CONFIGURADO'}`);
+
 if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   try {
+    // Validar que la URL tenga el formato correcto
+    if (!SUPABASE_URL.startsWith('http://') && !SUPABASE_URL.startsWith('https://')) {
+      throw new Error(`URL de Supabase inválida: debe empezar con http:// o https://`);
+    }
+    
+    if (SUPABASE_SERVICE_ROLE_KEY.length < 50) {
+      console.warn('⚠️  La SERVICE_ROLE_KEY parece muy corta. Verifica que sea la clave correcta.');
+    }
+    
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     console.log('✅ Cliente de Supabase inicializado para polling');
+    console.log(`   URL: ${SUPABASE_URL}`);
   } catch (error) {
     console.error('❌ Error inicializando Supabase:', error.message);
+    console.error('   Stack:', error.stack);
     console.warn('⚠️  Polling deshabilitado - configure SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY');
   }
 } else {
   console.warn('⚠️  Supabase no configurado - Polling deshabilitado');
+  if (!SUPABASE_URL) {
+    console.warn('   ❌ SUPABASE_URL no está configurado');
+  }
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('   ❌ SUPABASE_SERVICE_ROLE_KEY no está configurado');
+  }
   console.warn('   Configure SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en .env para habilitar polling');
 }
 
@@ -256,9 +277,14 @@ console.log('🖨️  Servicio de Impresión Local iniciado');
 console.log(`📡 Escuchando en puerto ${PORT}`);
 console.log(`🔐 .env cargado: ${dotenvLoaded ? 'SÍ' : 'NO'}`);
 console.log(`🔐 Token configurado: ${API_TOKEN ? 'SÍ' : 'NO'}`);
-console.log(`🔐 Token (completo): ${API_TOKEN || 'NO CONFIGURADO'}`);
 console.log(`🔐 Token (longitud): ${API_TOKEN ? API_TOKEN.length : 0} caracteres`);
-console.log(`🔐 Token (primeros 30): ${API_TOKEN ? API_TOKEN.substring(0, 30) + '...' : 'NO CONFIGURADO'}`);
+console.log('');
+console.log('📋 Configuración de Polling:');
+console.log(`   POLLING_ENABLED: ${POLLING_ENABLED}`);
+console.log(`   POLLING_INTERVAL_MS: ${POLLING_INTERVAL_MS}`);
+console.log(`   SUPABASE_URL: ${SUPABASE_URL ? '✅ Configurado (' + SUPABASE_URL.substring(0, 30) + '...)' : '❌ NO CONFIGURADO'}`);
+console.log(`   SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurado (' + SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...)' : '❌ NO CONFIGURADO'}`);
+console.log('');
 
 // Verificar si está usando el valor por defecto
 if (API_TOKEN === 'cambiar-este-token') {
@@ -960,6 +986,16 @@ async function pollForPendingOrders() {
     
     if (kitchenError) {
       console.error('❌ Error consultando órdenes de cocina:', kitchenError.message);
+      console.error('   Código:', kitchenError.code);
+      console.error('   Detalles:', kitchenError.details);
+      console.error('   Hint:', kitchenError.hint);
+      if (kitchenError.message.includes('fetch failed')) {
+        console.error('   🔍 DIAGNÓSTICO: Error de conexión a Supabase');
+        console.error('      - Verifica que SUPABASE_URL sea correcta');
+        console.error('      - Verifica que SUPABASE_SERVICE_ROLE_KEY sea correcta');
+        console.error('      - Verifica tu conexión a internet');
+        console.error('      - Verifica que no haya firewall bloqueando');
+      }
     } else if (kitchenOrders && kitchenOrders.length > 0) {
       console.log(`📋 Encontradas ${kitchenOrders.length} orden(es) pendientes de impresión de cocina`);
       
@@ -1017,6 +1053,16 @@ async function pollForPendingOrders() {
     
     if (receiptError) {
       console.error('❌ Error consultando órdenes de boleta:', receiptError.message);
+      console.error('   Código:', receiptError.code);
+      console.error('   Detalles:', receiptError.details);
+      console.error('   Hint:', receiptError.hint);
+      if (receiptError.message.includes('fetch failed')) {
+        console.error('   🔍 DIAGNÓSTICO: Error de conexión a Supabase');
+        console.error('      - Verifica que SUPABASE_URL sea correcta');
+        console.error('      - Verifica que SUPABASE_SERVICE_ROLE_KEY sea correcta');
+        console.error('      - Verifica tu conexión a internet');
+        console.error('      - Verifica que no haya firewall bloqueando');
+      }
     } else if (receiptOrders && receiptOrders.length > 0) {
       console.log(`🧾 Encontradas ${receiptOrders.length} orden(es) pendientes de impresión de boleta`);
       
