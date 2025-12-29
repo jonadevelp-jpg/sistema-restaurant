@@ -3,6 +3,7 @@ import PublicLayout from '../layouts/PublicLayout.astro';
 import HalalInfo from '../components/HalalInfo';
 import NavigationMenu from '../components/NavigationMenu';
 import HeroDynamic from '../components/HeroDynamic';
+import FeaturedSlider from '../components/FeaturedSlider';
 import Footer from '../components/Footer.astro';
 import { supabase } from '../lib/supabase';
 
@@ -196,37 +197,10 @@ function getCategoryImage(category: any): string {
                 })}
               </div>
 
-              <!-- Items destacados -->
+              <!-- Items destacados con slider -->
               {featuredItems && featuredItems.length > 0 && (
-                <div class="mt-16 max-w-4xl mx-auto">
-                  <div class="rounded-3xl p-6 sm:p-8 bg-warm-50" style="box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.12);">
-                    <h3 class="font-bold text-tomato-600 text-xl sm:text-2xl mb-6 text-center font-sans">
-                      ⭐ DESTACADOS ⭐
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {featuredItems.map((item: any) => (
-                        <a href={`/${item.category?.slug || ''}`} class="block group">
-                          <div class="flex items-center gap-4 p-4 rounded-2xl bg-warm-50 hover:shadow-lg transition-all" style="box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);">
-                            {item.image_url && (
-                              <img 
-                                src={item.image_url} 
-                                alt={item.name}
-                                class="w-16 h-16 object-cover rounded-xl"
-                                style="box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);"
-                              />
-                            )}
-                            <div class="flex-1 min-w-0">
-                              <h4 class="text-slate-800 font-semibold truncate font-sans">{item.name}</h4>
-                              <p class="text-slate-600 text-sm truncate font-sans">{item.description}</p>
-                            </div>
-                            <span class="text-tomato-600 font-bold whitespace-nowrap font-sans">
-                              ${item.price.toLocaleString('es-CL')}
-                            </span>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
+                <div class="mt-16 max-w-6xl mx-auto">
+                  <FeaturedSlider client:load items={featuredItems.slice(0, 3)} />
                 </div>
               )}
             </div>
