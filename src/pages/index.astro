@@ -154,7 +154,7 @@ function getCategoryImage(category: any): string {
                         overflow-hidden
                       " style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.12);">
                         <!-- Imagen de fondo de la categoría -->
-                        <div class="absolute inset-0 overflow-hidden rounded-lg opacity-80 group-hover:opacity-100 transition-opacity duration-300 bg-warm-100">
+                        <div class="absolute inset-0 overflow-hidden rounded-lg bg-warm-100">
                           <img
                             src={categoryImage}
                             alt={category.name}
@@ -176,16 +176,17 @@ function getCategoryImage(category: any): string {
                               img.style.opacity = '0.3';
                             }}
                           />
+                          <!-- Overlay negro con opacidad -->
+                          <div class="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition-all duration-300"></div>
                         </div>
                         
                         <!-- Texto destacado con fondo premium -->
                         <div class="relative z-10 h-full flex items-center justify-center">
                           <span class="
-                            font-bold text-tomato-600 text-sm md:text-base tracking-wide
+                            font-black text-white text-lg md:text-xl lg:text-2xl tracking-wide
                             px-4 py-2.5 rounded-xl
-                            bg-warm-50/98 backdrop-blur-sm
                             transition-all duration-300 font-sans
-                          " style="box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);">
+                          " style="text-shadow: 3px 3px 6px rgba(0, 0, 0, 1), 0 0 12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.6);">
                             {category.name.toUpperCase()}
                           </span>
                         </div>

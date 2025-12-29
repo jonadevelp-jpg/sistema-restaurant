@@ -46,13 +46,25 @@ export default function HeroDynamic({ categories }: HeroDynamicProps) {
     .map(cat => getHeroImage(cat.slug))
     .filter((img, index, self) => self.indexOf(img) === index); // Eliminar duplicados
 
-  // Rotar automáticamente cada 4 segundos
+  // Pre-cargar todas las imágenes
+  useEffect(() => {
+    heroImages.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [heroImages]);
+
+  // Rotar automáticamente cada 6 segundos (más lento)
   useEffect(() => {
     if (heroImages.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % heroImages.length);
-    }, 4000);
+      setCurrentIndex((prev) => {
+        // Avanzar a la siguiente imagen, si es la última, volver a la primera (0)
+        const nextIndex = prev + 1;
+        return nextIndex >= heroImages.length ? 0 : nextIndex;
+      });
+    }, 6000); // 6 segundos entre cada cambio
 
     return () => clearInterval(interval);
   }, [heroImages.length]);
@@ -62,52 +74,63 @@ export default function HeroDynamic({ categories }: HeroDynamicProps) {
   return (
     <>
       {/* Slider de imágenes hero - full width sin bordes, hasta los límites */}
-      <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
-        {/* Imagen actual con fade */}
+      <div className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden bg-black">
+        {/* Contenedor de todas las imágenes con slide */}
         <div 
-          key={currentIndex}
-          className="absolute inset-0 animate-fade-in"
+          className="flex h-full transition-transform duration-1000 ease-in-out"
+          style={{ 
+            transform: `translateX(-${currentIndex * 100}vw)`,
+            width: `${heroImages.length * 100}vw`
+          }}
         >
-          <img
-            src={heroImages[currentIndex]}
-            alt={`Hero ${currentIndex + 1}`}
-            className="w-full h-full object-cover"
-            loading="eager"
-            onError={(e) => {
-              // Si falla, intentar con diferentes variaciones
-              const img = e.target as HTMLImageElement;
-              const categorySlug = heroImages[currentIndex].replace('/hero-', '').replace('.png', '');
-              const altPaths = [
-                `/hero-${categorySlug}.png`,
-                `/images/ui/placeholders/product-hero.svg`, // Fallback final
-              ];
-              
-              let attemptIndex = 0;
-              const tryNext = () => {
-                if (attemptIndex < altPaths.length) {
-                  img.src = altPaths[attemptIndex];
-                  attemptIndex++;
-                } else {
-                  img.style.opacity = '0.3';
-                }
-              };
-              
-              img.onerror = tryNext;
-              tryNext();
-            }}
-          />
-          {/* Overlay para mejor legibilidad del texto */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
-          
-          {/* Título y logo dentro del hero */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4">
-            <h1 className="font-bold text-white text-4xl md:text-5xl lg:text-6xl tracking-wide mb-4 font-sans drop-shadow-2xl">
-              COMPLETOS & CHURRASCOS
-            </h1>
-            <p className="text-white/90 font-medium text-lg md:text-xl font-sans drop-shadow-lg">
-              Sabores tradicionales, siempre frescos
-            </p>
-          </div>
+          {heroImages.map((imageSrc, index) => (
+            <div
+              key={index}
+              className="relative h-full flex-shrink-0"
+              style={{ width: '100vw' }}
+            >
+              <img
+                src={imageSrc}
+                alt={`Hero ${index + 1}`}
+                className="w-full h-full object-cover object-center"
+                loading={index === 0 ? "eager" : "lazy"}
+                onError={(e) => {
+                  // Si falla, intentar con diferentes variaciones
+                  const img = e.target as HTMLImageElement;
+                  const categorySlug = imageSrc.replace('/hero-', '').replace('.png', '').replace('/her-', '');
+                  const altPaths = [
+                    `/hero-${categorySlug}.png`,
+                    `/images/ui/placeholders/product-hero.svg`, // Fallback final
+                  ];
+                  
+                  let attemptIndex = 0;
+                  const tryNext = () => {
+                    if (attemptIndex < altPaths.length) {
+                      img.src = altPaths[attemptIndex];
+                      attemptIndex++;
+                    } else {
+                      img.style.opacity = '0.3';
+                    }
+                  };
+                  
+                  img.onerror = tryNext;
+                  tryNext();
+                }}
+              />
+              {/* Overlay para mejor legibilidad del texto */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Título y subtítulo - siempre visibles sobre las imágenes */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 pointer-events-none">
+          <h1 className="font-bold text-white text-4xl md:text-5xl lg:text-6xl tracking-wide mb-4 font-sans drop-shadow-2xl">
+            COMPLETOS & CHURRASCOS
+          </h1>
+          <p className="text-white/90 font-medium text-lg md:text-xl font-sans drop-shadow-lg">
+            Sabores tradicionales, siempre frescos
+          </p>
         </div>
 
         {/* Indicadores de posición (dots) */}
@@ -153,20 +176,6 @@ export default function HeroDynamic({ categories }: HeroDynamicProps) {
         )}
       </div>
 
-      <style jsx global>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 1s ease-in-out;
-        }
-      `}</style>
     </>
   );
 }
