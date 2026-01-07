@@ -55,17 +55,19 @@ BEGIN
       AND (mi.visual_type = 'drink' OR mi.visual_type IS NULL)
     ORDER BY mi.name
   LOOP
-    -- Verificar si ya existe en stock
+    -- Verificar si ya existe en stock (bebidas tienen categoria_slug NULL)
     SELECT id INTO stock_existente_id
     FROM stock_panes_bebidas
     WHERE tipo = 'bebida'
-      AND LOWER(TRIM(nombre)) = LOWER(TRIM(bebida_item.name));
+      AND LOWER(TRIM(nombre)) = LOWER(TRIM(bebida_item.name))
+      AND categoria_slug IS NULL;
     
     IF stock_existente_id IS NULL THEN
-      -- Insertar nueva bebida en stock
+      -- Insertar nueva bebida en stock (bebidas tienen categoria_slug NULL)
       INSERT INTO stock_panes_bebidas (
         tipo,
         nombre,
+        categoria_slug,
         cantidad,
         precio_unitario,
         unidad_medida,
@@ -75,13 +77,14 @@ BEGIN
       VALUES (
         'bebida',
         bebida_item.name,
+        NULL, -- Bebidas tienen categoria_slug NULL
         0, -- Cantidad inicial en 0
         bebida_item.price,
         'un',
         0, -- Stock mínimo en 0
         bebida_item.image_url
       )
-      ON CONFLICT (tipo, nombre) DO UPDATE SET
+      ON CONFLICT (tipo, nombre, categoria_slug) DO UPDATE SET
         precio_unitario = EXCLUDED.precio_unitario,
         image_url = COALESCE(EXCLUDED.image_url, stock_panes_bebidas.image_url);
       
