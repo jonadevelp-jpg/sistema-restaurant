@@ -32,7 +32,6 @@ export default defineConfig({
     build: {
       rollupOptions: {
         // No excluir archivos del backend o src
-<<<<<<< HEAD
       },
     },
     build: {
@@ -55,8 +54,6 @@ export default defineConfig({
           }
           warn(warning);
         },
-=======
->>>>>>> dd47a5b19273f5df884acaecad7c9e9393285722
       },
     },
   },
