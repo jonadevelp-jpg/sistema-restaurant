@@ -878,6 +878,22 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 ✅ Lista
               </button>
               <button
+                onClick={() => setShowComanda(true)}
+                disabled={items.length === 0}
+                aria-label="Ver comanda de cocina"
+                className="min-h-[48px] min-w-[140px] px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 active:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-300 transition-all whitespace-nowrap"
+              >
+                🖨️ Comanda
+              </button>
+              <button
+                onClick={() => setShowBoleta(true)}
+                disabled={items.length === 0}
+                aria-label="Ver boleta de cliente"
+                className="min-h-[48px] min-w-[130px] px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all whitespace-nowrap"
+              >
+                🧾 Boleta
+              </button>
+              <button
                 onClick={pagarOrden}
                 disabled={orden.estado === 'paid' || saving || items.length === 0}
                 aria-label="Pagar orden"
