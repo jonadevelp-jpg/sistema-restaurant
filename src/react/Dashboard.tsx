@@ -266,7 +266,7 @@ export default function Dashboard() {
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Accesos Rápidos</h2>
             <div className="space-y-2 sm:space-y-3">
               <a
-                href="/admin/mesas"
+                href="/admin/pedidos"
                 className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-2 sm:gap-3">
