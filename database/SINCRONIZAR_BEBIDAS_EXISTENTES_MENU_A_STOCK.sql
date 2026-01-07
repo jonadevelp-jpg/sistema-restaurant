@@ -133,11 +133,9 @@ BEGIN
   -- Mostrar resumen final
   RAISE NOTICE '';
   RAISE NOTICE '📊 Resumen de stock de bebidas:';
-  PERFORM (
-    SELECT COUNT(*) 
-    FROM stock_panes_bebidas 
-    WHERE tipo = 'bebida'
-  ) INTO bebidas_sincronizadas;
+  SELECT COUNT(*) INTO bebidas_sincronizadas
+  FROM stock_panes_bebidas 
+  WHERE tipo = 'bebida';
   RAISE NOTICE '   - Total de bebidas en stock: %', bebidas_sincronizadas;
   
 END $$;
