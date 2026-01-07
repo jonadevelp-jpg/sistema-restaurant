@@ -60,6 +60,12 @@ BEGIN
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
+  INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
+  VALUES
+    ('Coca-Cola 3L', 'Coca-Cola Sabor Original - Botella 3 Litros', 4000, v_bebidas_id, true, false, v_order_num, 'drink')
+    ON CONFLICT DO NOTHING;
+  v_order_num := v_order_num + 1;
+  
   -- =====================================================
   -- PEPSI
   -- =====================================================
@@ -78,6 +84,12 @@ BEGIN
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
     ('Pepsi 591ml', 'Pepsi - Botella 591ml', 2000, v_bebidas_id, true, false, v_order_num, 'drink')
+    ON CONFLICT DO NOTHING;
+  v_order_num := v_order_num + 1;
+  
+  INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
+  VALUES
+    ('Pepsi 3L', 'Pepsi - Botella 3 Litros', 4000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
@@ -128,13 +140,13 @@ BEGIN
   -- =====================================================
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Red Bull 250ml', 'Red Bull Energy Drink - Lata 250ml', 2500, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Red Bull 250ml', 'Red Bull Energy Drink - Lata 250ml', 2000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Red Bull Summer 250ml', 'Red Bull Summer Edition - Sabor Curuba & Flor de Sauco - Lata 250ml', 2500, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Red Bull Summer 250ml', 'Red Bull Summer Edition - Sabor Curuba & Flor de Sauco - Lata 250ml', 2000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
@@ -143,19 +155,19 @@ BEGIN
   -- =====================================================
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Fruna Naranja 500ml', 'Fruna Sabor Naranja - Botella 500ml', 1500, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Fruna Naranja 500ml', 'Fruna Sabor Naranja - Botella 500ml', 1000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Fruna Limón Sour 500ml', 'Fruna Sabor Limón Sour - Botella 500ml', 1500, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Fruna Limón Sour 500ml', 'Fruna Sabor Limón Sour - Botella 500ml', 1000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Fruna Papaya 500ml', 'Fruna Sabor Papaya - Botella 500ml', 1500, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Fruna Papaya 500ml', 'Fruna Sabor Papaya - Botella 500ml', 1000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
@@ -164,7 +176,7 @@ BEGIN
   -- =====================================================
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Powerade 850ml', 'Powerade Frozen Blast - Hidratación Duradera - Botella 850ml', 2500, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Powerade 850ml', 'Powerade Frozen Blast - Hidratación Duradera - Botella 850ml', 2000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
@@ -173,13 +185,13 @@ BEGIN
   -- =====================================================
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Watts Naranja 1.5L', 'Watts Néctar de Fruta Natural Naranja - Reducido en Calorías - 0%% Azúcar Añadido - Botella 1.5L', 3000, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Watts Naranja 1.5L', 'Watts Néctar de Fruta Natural Naranja - Reducido en Calorías - 0%% Azúcar Añadido - Botella 1.5L', 2500, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Watts Durazno 1.5L', 'Watts Néctar de Fruta Natural Durazno - Reducido en Calorías - Botella 1.5L', 3000, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Watts Durazno 1.5L', 'Watts Néctar de Fruta Natural Durazno - Reducido en Calorías - Botella 1.5L', 2500, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
@@ -221,7 +233,13 @@ BEGIN
   
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
-    ('Agua Con Gas 500ml', 'Agua Premium Natural - Con Gas - Botella 500ml', 1200, v_bebidas_id, true, false, v_order_num, 'drink')
+    ('Agua Con Gas 500ml', 'Agua Premium Natural - Con Gas - Botella 500ml', 1000, v_bebidas_id, true, false, v_order_num, 'drink')
+    ON CONFLICT DO NOTHING;
+  v_order_num := v_order_num + 1;
+  
+  INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
+  VALUES
+    ('Agua Cachantún Grande', 'Agua Cachantún - Botella Grande', 2500, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
@@ -246,6 +264,15 @@ BEGIN
   INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
   VALUES
     ('Gatorade 500ml', 'Gatorade - Botella 500ml', 2000, v_bebidas_id, true, false, v_order_num, 'drink')
+    ON CONFLICT DO NOTHING;
+  v_order_num := v_order_num + 1;
+  
+  -- =====================================================
+  -- CRUSH
+  -- =====================================================
+  INSERT INTO menu_items (name, description, price, category_id, is_available, is_featured, order_num, visual_type)
+  VALUES
+    ('Crush Grande', 'Crush - Botella Grande', 4000, v_bebidas_id, true, false, v_order_num, 'drink')
     ON CONFLICT DO NOTHING;
   v_order_num := v_order_num + 1;
   
