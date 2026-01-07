@@ -25,6 +25,10 @@ export class PrintJobsQueries {
       .single();
 
     if (error) {
+      // Detectar error de tabla no encontrada
+      if (error.code === '42P01' || (error.message && error.message.includes('Could not find the table') && error.message.includes('print_jobs'))) {
+        throw new Error('La tabla print_jobs no existe. Por favor ejecuta el script SQL: database/CREAR_TABLA_PRINT_JOBS.sql en Supabase SQL Editor.');
+      }
       throw new Error(`Error creando print_job: ${error.message}`);
     }
 
