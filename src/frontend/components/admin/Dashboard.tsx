@@ -214,8 +214,30 @@ export default function Dashboard() {
         }
       });
 
-      // Convertir a array y ordenar por cantidad
-      const ventasArray = Array.from(ventasMap.values()).sort((a, b) => b.cantidad - a.cantidad);
+      // Convertir a array y ordenar: primero comida, luego bebidas, luego por cantidad
+      const ventasArray = Array.from(ventasMap.values()).sort((a, b) => {
+        // Definir prioridad de categorías (comida primero, luego bebidas)
+        const getPrioridad = (categoria: string): number => {
+          const cat = categoria.toLowerCase();
+          if (cat === 'completos' || cat === 'sandwiches' || cat === 'pollo' || cat === 'acompanamientos' || cat === 'destacados') {
+            return 1; // Comida primero
+          } else if (cat === 'bebidas' || cat === 'bebestibles') {
+            return 2; // Bebidas después
+          }
+          return 3; // Otros al final
+        };
+
+        const prioridadA = getPrioridad(a.categoria);
+        const prioridadB = getPrioridad(b.categoria);
+
+        // Si tienen diferente prioridad, ordenar por prioridad
+        if (prioridadA !== prioridadB) {
+          return prioridadA - prioridadB;
+        }
+
+        // Si tienen la misma prioridad, ordenar por cantidad (mayor primero)
+        return b.cantidad - a.cantidad;
+      });
       setVentasPorItem(ventasArray);
     } catch (error) {
       console.error('Error cargando ventas por item:', error);
