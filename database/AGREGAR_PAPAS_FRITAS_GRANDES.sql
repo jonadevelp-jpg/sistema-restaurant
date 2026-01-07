@@ -100,11 +100,8 @@ BEGIN
     RAISE NOTICE '   - Imagen: %', COALESCE(v_papas_pequenas_image_url, 'Sin imagen');
   END IF;
   
-  -- Verificación final
-  SELECT id, name, price, image_url, category_id
-  INTO v_papas_grandes_id, v_papas_grandes_id, v_papas_grandes_id, v_papas_grandes_id, v_papas_grandes_id
-  FROM menu_items
-  WHERE id = v_papas_grandes_id;
+  -- Verificación final (comentada - solo para mostrar información)
+  -- El item ya fue creado/actualizado arriba
   
   RAISE NOTICE '';
   RAISE NOTICE '✅ ==========================================';
