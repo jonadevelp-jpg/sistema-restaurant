@@ -147,6 +147,21 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
     }).format(Math.round(price));
   };
 
+  const formatMetodoPago = (metodo?: string) => {
+    if (!metodo) return 'No especificado';
+    const metodoUpper = metodo.toUpperCase();
+    switch (metodoUpper) {
+      case 'EFECTIVO':
+        return '💵 Efectivo';
+      case 'TARJETA':
+        return '💳 Tarjeta (Débito/Crédito)';
+      case 'TRANSFERENCIA':
+        return '🏦 Transferencia';
+      default:
+        return metodo;
+    }
+  };
+
   // Los precios ya incluyen IVA (19% en Chile)
   // Calcular precio sin IVA: precio_con_iva / 1.19
   // Calcular IVA: precio_con_iva - precio_sin_iva
@@ -268,12 +283,14 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           </div>
         </div>
 
-        {/* Método de pago */}
-        {orden.metodo_pago && (
+        {/* Método de pago - Mostrar siempre si la orden está pagada */}
+        {(orden.estado === 'paid' || orden.metodo_pago || orden.paid_at) && (
           <>
             <div className="boleta-separator"></div>
             <div className="boleta-pago">
-              <div>Método de Pago: <strong>{orden.metodo_pago}</strong></div>
+              <div>
+                Método de Pago: <strong>{formatMetodoPago(orden.metodo_pago)}</strong>
+              </div>
               {orden.paid_at && (
                 <div>Pagado: {new Date(orden.paid_at).toLocaleString('es-CL')}</div>
               )}
