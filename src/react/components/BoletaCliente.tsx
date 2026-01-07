@@ -206,10 +206,7 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
       <div ref={printRef} className="boleta-cliente">
         {/* Encabezado */}
         <div className="boleta-header">
-          <div className="boleta-logo">COMPLETOS & CHURRASCOS</div>
-          <div className="boleta-subtitle">RUT: 77669643-9</div>
-          <div className="boleta-subtitle">Providencia 1388 Local 49</div>
-          <div className="boleta-subtitle">Celular: 939459286</div>
+          <div className="boleta-logo">COMPLETOS Y CHURRASCOS</div>
           <div className="boleta-separator-small"></div>
           <div className="boleta-info">
             <div>Orden: {orden.numero_orden}</div>
@@ -294,12 +291,6 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
         <div className="boleta-separator"></div>
         <div className="boleta-footer">
           <div>¡Gracias por su visita!</div>
-          <div className="boleta-footer-small">
-            Carne Halal Certificada 🕌
-          </div>
-          <div className="boleta-footer-small">
-            {new Date().toLocaleString('es-CL')}
-          </div>
         </div>
       </div>
 
