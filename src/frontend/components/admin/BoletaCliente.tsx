@@ -261,10 +261,10 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             <span>TOTAL:</span>
             <span>{formatPrice(total)}</span>
           </div>
-          <div className="boleta-total-line" style={{ fontSize: '8pt', color: '#666' }}>
-            <span>Propina sugerida (10%):</span>
-            <span>{formatPrice(propina)}</span>
-          </div>
+            <div className="boleta-total-line" style={{ fontSize: '8pt', color: '#000', fontWeight: '600' }}>
+              <span>Propina sugerida (10%):</span>
+              <span>{formatPrice(propina)}</span>
+            </div>
           <div className="boleta-total-line boleta-total-final" style={{ fontSize: '12pt' }}>
             <span>TOTAL CON PROPINA:</span>
             <span>{formatPrice(totalConPropina)}</span>
@@ -357,12 +357,13 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
 
           .boleta-subtitle {
             font-size: 7pt !important;
-            color: #555 !important;
+            color: #000 !important;
+            font-weight: 600 !important;
             margin-bottom: 3px !important;
           }
 
           .boleta-separator-small {
-            border-top: 1px solid #333 !important;
+            border-top: 2px solid #000 !important;
             margin: 4px 0 !important;
           }
 
@@ -371,14 +372,18 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             line-height: 1.3 !important;
             text-align: left !important;
             margin-top: 3px !important;
+            color: #000 !important;
+            font-weight: 600 !important;
           }
 
           .boleta-info div {
             margin: 1px 0 !important;
+            color: #000 !important;
+            font-weight: 600 !important;
           }
 
           .boleta-separator {
-            border-top: 1px dashed #333 !important;
+            border-top: 2px dashed #000 !important;
             margin: 6px 0 !important;
           }
 
@@ -392,8 +397,9 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             gap: 3px !important;
             font-weight: bold !important;
             font-size: 7pt !important;
+            color: #000 !important;
             padding-bottom: 2px !important;
-            border-bottom: 1px solid #333 !important;
+            border-bottom: 2px solid #000 !important;
             margin-bottom: 3px !important;
           }
 
@@ -402,6 +408,7 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             grid-template-columns: 15px 1fr 45px !important;
             gap: 3px !important;
             font-size: 7pt !important;
+            color: #000 !important;
             margin: 1px 0 !important;
             padding: 1px 0 !important;
           }
@@ -414,6 +421,8 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           .boleta-item-descripcion {
             word-break: break-word !important;
             font-size: 8pt !important;
+            color: #000 !important;
+            font-weight: 600 !important;
           }
 
           .boleta-item-total {
@@ -426,7 +435,8 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
 
           .boleta-item-desglose {
             font-size: 7pt !important;
-            color: #666 !important;
+            color: #000 !important;
+            font-weight: 600 !important;
             margin-left: 25px !important;
             margin-top: 1px !important;
             margin-bottom: 2px !important;
@@ -443,6 +453,8 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             margin: 2px 0 !important;
             font-size: 7pt !important;
             white-space: nowrap !important;
+            color: #000 !important;
+            font-weight: 600 !important;
           }
           
           .boleta-total-line span:last-child {
@@ -466,9 +478,11 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           .boleta-pago {
             font-size: 7pt !important;
             text-align: center !important;
+            color: #000 !important;
+            font-weight: 600 !important;
             padding: 3px !important;
             background: #f0f0f0 !important;
-            border: 1px solid #333 !important;
+            border: 2px solid #000 !important;
             margin: 4px 0 !important;
           }
 
@@ -479,14 +493,17 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           .boleta-footer {
             text-align: center !important;
             font-size: 7pt !important;
+            color: #000 !important;
+            font-weight: 600 !important;
             margin-top: 6px !important;
             padding-top: 4px !important;
-            border-top: 1px solid #333 !important;
+            border-top: 2px solid #000 !important;
           }
 
           .boleta-footer-small {
             font-size: 6pt !important;
-            color: #666 !important;
+            color: #000 !important;
+            font-weight: 600 !important;
             margin-top: 2px !important;
           }
         }
