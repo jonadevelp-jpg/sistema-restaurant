@@ -187,17 +187,17 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
       {/* Botones de control - solo visible en pantalla */}
       <div className="no-print p-4 bg-slate-100 flex gap-3">
         <button
-          onClick={handlePrint}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          🖨️ Vista Previa
-        </button>
-        <button
           onClick={handlePrintReceipt}
           disabled={printing}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {printing ? '⏳ Enviando...' : '📤 Imprimir Boleta'}
+        </button>
+        <button
+          onClick={handlePrint}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          🖨️ Vista Previa
         </button>
         {onClose && (
           <button
@@ -244,7 +244,6 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             <span>Total</span>
           </div>
           {items.map((item) => {
-            const desglose = calcularDesgloseIVA(item.subtotal);
             return (
               <div key={item.id} style={{ marginBottom: '4px' }}>
                 <div className="boleta-item">
@@ -252,7 +251,7 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
                   <span className="boleta-item-descripcion">
                     {item.menu_item?.name || 'Item'}
                   </span>
-                  <span className="boleta-item-total">{formatPrice(desglose.sinIVA)}</span>
+                  <span className="boleta-item-total">{formatPrice(item.subtotal)}</span>
                 </div>
               </div>
             );
@@ -402,8 +401,8 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
 
           .boleta-items-header {
             display: grid !important;
-            grid-template-columns: 18px 1fr 50px !important;
-            gap: 2px !important;
+            grid-template-columns: 15px 1fr 45px !important;
+            gap: 3px !important;
             font-weight: bold !important;
             font-size: 7pt !important;
             padding-bottom: 2px !important;
@@ -413,8 +412,8 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
 
           .boleta-item {
             display: grid !important;
-            grid-template-columns: 18px 1fr 50px !important;
-            gap: 2px !important;
+            grid-template-columns: 15px 1fr 45px !important;
+            gap: 3px !important;
             font-size: 7pt !important;
             margin: 1px 0 !important;
             padding: 1px 0 !important;
@@ -433,7 +432,9 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
           .boleta-item-total {
             text-align: right !important;
             font-weight: bold !important;
-            font-size: 8pt !important;
+            font-size: 7pt !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
           }
 
           .boleta-item-desglose {
@@ -453,15 +454,26 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
             display: flex !important;
             justify-content: space-between !important;
             margin: 2px 0 !important;
-            font-size: 8pt !important;
+            font-size: 7pt !important;
+            white-space: nowrap !important;
+          }
+          
+          .boleta-total-line span:last-child {
+            margin-left: auto !important;
+            text-align: right !important;
+            font-weight: bold !important;
           }
 
           .boleta-total-final {
-            font-size: 9pt !important;
+            font-size: 8pt !important;
             font-weight: bold !important;
             border-top: 2px solid black !important;
             padding-top: 3px !important;
             margin-top: 4px !important;
+          }
+          
+          .boleta-total-final span:last-child {
+            font-size: 9pt !important;
           }
 
           .boleta-pago {
