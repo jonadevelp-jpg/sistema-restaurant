@@ -10,8 +10,8 @@
 
 DO $$
 DECLARE
-  categoria_bebidas_id UUID;
-  categoria_bebestibles_id UUID;
+  categoria_bebidas_id INTEGER;
+  categoria_bebestibles_id INTEGER;
   bebida_item RECORD;
   stock_existente_id UUID;
   bebidas_sincronizadas INTEGER := 0;
