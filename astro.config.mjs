@@ -23,6 +23,15 @@ export default defineConfig({
     resolve: {
       alias: {
         '@backend': path.resolve(__dirname, './backend/src'),
+        '@': path.resolve(__dirname, './src'),
+      },
+      // Asegurar que las extensiones .ts se resuelvan correctamente
+      extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
+    },
+    // Incluir archivos del backend y src en el build
+    build: {
+      rollupOptions: {
+        // No excluir archivos del backend o src
       },
     },
     build: {
