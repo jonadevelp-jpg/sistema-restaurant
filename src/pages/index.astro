@@ -3,7 +3,6 @@ import PublicLayout from '../layouts/PublicLayout.astro';
 import HalalInfo from '../components/HalalInfo';
 import NavigationMenu from '../components/NavigationMenu';
 import HeroDynamic from '../components/HeroDynamic';
-import FeaturedSlider from '../components/FeaturedSlider';
 import Footer from '../components/Footer.astro';
 import { supabase } from '../lib/supabase';
 
@@ -197,12 +196,6 @@ function getCategoryImage(category: any): string {
                 })}
               </div>
 
-              <!-- Items destacados con slider -->
-              {featuredItems && featuredItems.length > 0 && (
-                <div class="mt-16 max-w-6xl mx-auto">
-                  <FeaturedSlider client:load items={featuredItems.slice(0, 3)} />
-                </div>
-              )}
             </div>
           ) : (
             <div class="border-2 border-tomato-300/50 rounded-xl p-8 bg-white/90 backdrop-blur-sm max-w-md mx-auto shadow-lg">

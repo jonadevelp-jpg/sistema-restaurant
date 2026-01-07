@@ -49,7 +49,8 @@ export default function Sidebar({ currentPath, isOpen = true, onToggle }: Sideba
   const allMenuItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: '📊', roles: ['admin', 'encargado', 'mesero'] },
     { path: '/admin/menu', label: 'Gestión del Menú', icon: '🍽️', roles: ['admin', 'encargado'] },
-    { path: '/admin/mesas', label: 'Pedidos (POS)', icon: '🪑', roles: ['admin', 'encargado', 'mesero'] },
+    { path: '/admin/pedidos', label: 'Pedidos (POS)', icon: '🛒', roles: ['admin', 'encargado', 'mesero'] },
+    { path: '/admin/mesas', label: 'Mesas', icon: '🪑', roles: ['admin', 'encargado', 'mesero'] },
     { path: '/admin/ordenes', label: 'Órdenes', icon: '📋', roles: ['admin', 'encargado', 'mesero'] },
     { path: '/admin/stock-panes-bebidas', label: 'Stock Panes/Bebidas', icon: '🥖', roles: ['admin', 'encargado'] },
     { path: '/admin/empleados', label: 'Empleados', icon: '👥', roles: ['admin', 'encargado'] },

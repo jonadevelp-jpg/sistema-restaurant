@@ -9,7 +9,6 @@ import { requireAuth } from '../helpers/auth';
 import { successResponse, errorResponse } from '../helpers/api-helpers';
 
 // Importación dinámica del printer-service (está en el frontend)
-<<<<<<< HEAD
 // En producción, esto debería estar en el backend o ser un servicio separado
 // NOTA: En Vercel, el servicio de impresión no está disponible (solo funciona localmente)
 async function getPrinterService() {
@@ -42,15 +41,6 @@ async function getPrinterService() {
     // Silenciar errores durante build - el servicio no está disponible en Vercel de todas formas
     return null;
   }
-=======
-// NOTA: Deshabilitado durante el build para evitar errores de resolución de Rollup
-// La impresión se puede manejar mediante el servicio local de impresión si está configurado
-async function getPrinterService() {
-  // Retornar null para evitar problemas de resolución durante el build
-  // La funcionalidad de impresión se maneja mejor a través del servicio local de impresión
-  // que se ejecuta por separado y no interfiere con el build
-  return null;
->>>>>>> dd47a5b19273f5df884acaecad7c9e9393285722
 }
 
 export class OrdersController {
