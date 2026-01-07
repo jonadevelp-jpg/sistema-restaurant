@@ -20,6 +20,7 @@ export default function OrdenesListView() {
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState<string>('all');
   const [filtroFecha, setFiltroFecha] = useState<string>('today');
+  const [ordenesSeleccionadas, setOrdenesSeleccionadas] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadOrdenes();
@@ -119,58 +120,86 @@ export default function OrdenesListView() {
     .filter((o) => o.estado === 'paid')
     .reduce((sum, o) => sum + o.total, 0);
 
+  // Manejo de selección
+  function toggleSeleccionOrden(ordenId: string) {
+    const nuevasSeleccionadas = new Set(ordenesSeleccionadas);
+    if (nuevasSeleccionadas.has(ordenId)) {
+      nuevasSeleccionadas.delete(ordenId);
+    } else {
+      nuevasSeleccionadas.add(ordenId);
+    }
+    setOrdenesSeleccionadas(nuevasSeleccionadas);
+  }
+
+  function toggleSeleccionarTodas() {
+    if (ordenesSeleccionadas.size === ordenes.length) {
+      setOrdenesSeleccionadas(new Set());
+    } else {
+      setOrdenesSeleccionadas(new Set(ordenes.map(o => o.id)));
+    }
+  }
+
   async function eliminarOrden(ordenId: string) {
     if (!confirm('¿Estás seguro de eliminar esta orden? Esta acción no se puede deshacer y liberará la mesa si está asignada.')) {
       return;
     }
 
+    await eliminarOrdenes([ordenId]);
+  }
+
+  async function eliminarOrdenesSeleccionadas() {
+    const cantidad = ordenesSeleccionadas.size;
+    if (cantidad === 0) return;
+
+    if (!confirm(`¿Estás seguro de eliminar ${cantidad} orden(es) seleccionada(s)? Esta acción no se puede deshacer y liberará las mesas si están asignadas.`)) {
+      return;
+    }
+
+    await eliminarOrdenes(Array.from(ordenesSeleccionadas));
+  }
+
+  async function eliminarOrdenes(ordenIds: string[]) {
     try {
-      // Obtener la orden para saber si tiene mesa asignada
-      const { data: orden, error: fetchError } = await supabase
+      // Obtener las órdenes para saber qué mesas liberar
+      const { data: ordenesData, error: fetchError } = await supabase
         .from('ordenes_restaurante')
-        .select('mesa_id')
-        .eq('id', ordenId)
-        .single();
+        .select('id, mesa_id')
+        .in('id', ordenIds);
 
       if (fetchError) throw fetchError;
 
-      const mesaId = orden?.mesa_id;
+      const mesaIds = ordenesData?.filter(o => o.mesa_id).map(o => o.mesa_id).filter(Boolean) || [];
 
-      // Eliminar la orden
+      // Eliminar las órdenes
       const { error: deleteError } = await supabase
         .from('ordenes_restaurante')
         .delete()
-        .eq('id', ordenId);
+        .in('id', ordenIds);
 
       if (deleteError) throw deleteError;
 
-      // Liberar la mesa si tenía una asignada
-      if (mesaId) {
-        console.log(`[eliminarOrden] Intentando liberar mesa ${mesaId}...`);
-        
-        const { data: mesaData, error: mesaError } = await supabase
+      // Liberar las mesas si tenían asignadas
+      if (mesaIds.length > 0) {
+        const { error: mesaError } = await supabase
           .from('mesas')
           .update({ estado: 'libre' })
-          .eq('id', mesaId)
-          .select()
-          .single();
+          .in('id', mesaIds);
 
         if (mesaError) {
-          console.error('[eliminarOrden] Error liberando mesa:', mesaError);
-          console.error('[eliminarOrden] Detalles del error:', JSON.stringify(mesaError, null, 2));
-        } else if (mesaData) {
-          console.log(`[eliminarOrden] ✅ Mesa ${mesaId} (Mesa ${mesaData.numero}) liberada correctamente. Estado actual: ${mesaData.estado}`);
+          console.error('[eliminarOrdenes] Error liberando mesas:', mesaError);
         } else {
-          console.warn(`[eliminarOrden] ⚠️ Mesa ${mesaId} no se encontró o no se actualizó`);
+          console.log(`[eliminarOrdenes] ✅ ${mesaIds.length} mesa(s) liberada(s) correctamente`);
         }
-      } else {
-        console.log('[eliminarOrden] Orden sin mesa asignada, no se necesita liberar');
       }
 
+      // Limpiar selección
+      setOrdenesSeleccionadas(new Set());
+      
+      // Recargar órdenes
       loadOrdenes();
     } catch (error: any) {
-      console.error('[eliminarOrden] Error:', error);
-      alert('Error eliminando orden: ' + error.message);
+      console.error('[eliminarOrdenes] Error:', error);
+      alert('Error eliminando órdenes: ' + error.message);
     }
   }
 
@@ -191,14 +220,17 @@ export default function OrdenesListView() {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros y acciones */}
       <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
           <div>
             <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Filtro por Estado</label>
             <select
               value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
+              onChange={(e) => {
+                setFiltroEstado(e.target.value);
+                setOrdenesSeleccionadas(new Set()); // Limpiar selección al cambiar filtro
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="all">Todas</option>
@@ -214,7 +246,10 @@ export default function OrdenesListView() {
             <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-2">Filtro por Fecha</label>
             <select
               value={filtroFecha}
-              onChange={(e) => setFiltroFecha(e.target.value)}
+              onChange={(e) => {
+                setFiltroFecha(e.target.value);
+                setOrdenesSeleccionadas(new Set()); // Limpiar selección al cambiar filtro
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm sm:text-base"
             >
               <option value="today">Hoy</option>
@@ -224,13 +259,34 @@ export default function OrdenesListView() {
             </select>
           </div>
         </div>
+        
+        {/* Botón eliminar seleccionadas */}
+        {ordenesSeleccionadas.size > 0 && (
+          <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+            <span className="text-sm text-slate-600">
+              {ordenesSeleccionadas.size} orden(es) seleccionada(s)
+            </span>
+            <button
+              onClick={eliminarOrdenesSeleccionadas}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+            >
+              🗑️ Eliminar Seleccionadas
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Vista móvil - Cards */}
       <div className="md:hidden space-y-3">
         {ordenes.map((orden) => (
           <div key={orden.id} className="bg-white rounded-lg shadow-md p-4 border border-slate-200">
-            <div className="flex justify-between items-start mb-2">
+            <div className="flex items-start gap-2 mb-2">
+              <input
+                type="checkbox"
+                checked={ordenesSeleccionadas.has(orden.id)}
+                onChange={() => toggleSeleccionOrden(orden.id)}
+                className="mt-1 w-4 h-4 text-red-600 border-slate-300 rounded focus:ring-red-500"
+              />
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm truncate">{orden.numero_orden}</h3>
                 {orden.mesas && (
@@ -279,6 +335,15 @@ export default function OrdenesListView() {
           <table className="w-full">
             <thead className="bg-slate-100">
               <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={ordenes.length > 0 && ordenesSeleccionadas.size === ordenes.length}
+                    onChange={toggleSeleccionarTodas}
+                    className="w-4 h-4 text-red-600 border-slate-300 rounded focus:ring-red-500"
+                    title="Seleccionar todas"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Orden</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Mesa</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Mesero</th>
@@ -292,6 +357,14 @@ export default function OrdenesListView() {
             <tbody className="divide-y divide-slate-200">
               {ordenes.map((orden) => (
                 <tr key={orden.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={ordenesSeleccionadas.has(orden.id)}
+                      onChange={() => toggleSeleccionOrden(orden.id)}
+                      className="w-4 h-4 text-red-600 border-slate-300 rounded focus:ring-red-500"
+                    />
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium">{orden.numero_orden}</td>
                   <td className="px-4 py-3 text-sm">
                     {orden.mesas ? `Mesa ${orden.mesas.numero}` : '-'}
