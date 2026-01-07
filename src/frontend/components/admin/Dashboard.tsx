@@ -54,7 +54,8 @@ export default function Dashboard() {
   
   // Historial de órdenes
   const [ordenesHistorial, setOrdenesHistorial] = useState<OrdenHistorial[]>([]);
-  const [filtroHistorial, setFiltroHistorial] = useState<'dia' | 'semana' | 'mes' | 'rango'>('dia');
+  const [totalVentasHistorial, setTotalVentasHistorial] = useState<number>(0);
+  const [filtroHistorial, setFiltroHistorial] = useState<'dia' | 'ayer' | 'semana' | 'mes' | 'rango'>('dia');
   const [fechaInicio, setFechaInicio] = useState<string>('');
   const [fechaFin, setFechaFin] = useState<string>('');
 
@@ -300,6 +301,13 @@ export default function Dashboard() {
 
       if (filtroHistorial === 'dia') {
         query = query.gte('created_at', hoy.toISOString());
+      } else if (filtroHistorial === 'ayer') {
+        const ayer = new Date();
+        ayer.setDate(ayer.getDate() - 1);
+        ayer.setHours(0, 0, 0, 0);
+        const finAyer = new Date(ayer);
+        finAyer.setHours(23, 59, 59, 999);
+        query = query.gte('created_at', ayer.toISOString()).lte('created_at', finAyer.toISOString());
       } else if (filtroHistorial === 'semana') {
         const semana = new Date();
         semana.setDate(semana.getDate() - 7);
@@ -320,6 +328,12 @@ export default function Dashboard() {
       const { data: ordenesData, error: ordenesError } = await query;
 
       if (ordenesError) throw ordenesError;
+
+      // Calcular total de ventas (solo órdenes pagadas)
+      const totalVentas = ordenesData
+        ?.filter((o: any) => o.estado === 'paid')
+        .reduce((sum: number, o: any) => sum + (o.total || 0), 0) || 0;
+      setTotalVentasHistorial(totalVentas);
 
       // Obtener información de mesas por separado
       const mesaIds = ordenesData?.filter(o => o.mesa_id).map(o => o.mesa_id) || [];
@@ -347,6 +361,7 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Error cargando historial de órdenes:', error);
       setOrdenesHistorial([]);
+      setTotalVentasHistorial(0);
     }
   }
 
@@ -485,7 +500,12 @@ export default function Dashboard() {
         {/* Historial de Órdenes */}
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <h2 className="text-base sm:text-lg font-semibold">📋 Historial de Órdenes</h2>
+            <div>
+              <h2 className="text-base sm:text-lg font-semibold mb-2">📋 Historial de Órdenes</h2>
+              <div className="text-sm font-semibold text-green-700">
+                Total Ventas: {formatCLP(totalVentasHistorial)}
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFiltroHistorial('dia')}
@@ -495,7 +515,17 @@ export default function Dashboard() {
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                Día
+                Hoy
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('ayer')}
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
+                  filtroHistorial === 'ayer'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Ayer
               </button>
               <button
                 onClick={() => setFiltroHistorial('semana')}
