@@ -8,6 +8,20 @@
 -- Ejecutar en Supabase SQL Editor
 -- =====================================================
 
+-- =====================================================
+-- 1. AGREGAR CAMPO IMAGE_URL SI NO EXISTE
+-- =====================================================
+
+ALTER TABLE stock_panes_bebidas 
+ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+-- Comentario
+COMMENT ON COLUMN stock_panes_bebidas.image_url IS 'URL de la imagen de la bebida (opcional). Se sincroniza con menu_items.';
+
+-- =====================================================
+-- 2. SINCRONIZAR BEBIDAS EXISTENTES
+-- =====================================================
+
 DO $$
 DECLARE
   categoria_bebidas_id INTEGER;
