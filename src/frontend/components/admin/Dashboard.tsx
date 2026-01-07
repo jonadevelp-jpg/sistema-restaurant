@@ -5,21 +5,43 @@ import { formatCLP } from '@/frontend/utils/currency';
 import { obtenerEstadisticasPropinas } from '@/backend/services/tips.service';
 import type { TipoPedido } from '@/@types';
 
+interface VentasPorItem {
+  nombre: string;
+  categoria: string;
+  cantidad: number;
+  total: number;
+}
+
+interface OrdenHistorial {
+  id: string;
+  numero_orden: string;
+  estado: string;
+  total: number;
+  metodo_pago?: string;
+  created_at: string;
+  paid_at?: string;
+  mesa_id?: string;
+  tipo_pedido?: string;
+  mesas?: { numero: number };
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({
     ventasHoy: 0,
     ordenesPendientes: 0,
-    mesasOcupadas: 0,
-    gastosMes: 0,
+    ventasMes: 0,
+    productosStockBajo: 0,
   });
+  const [ventasPorItem, setVentasPorItem] = useState<VentasPorItem[]>([]);
   const [stockBajo, setStockBajo] = useState<Array<{
     id: string;
     nombre: string;
     stock_actual: number;
     stock_minimo: number;
     unidad_medida: string;
+    tipo?: string;
   }>>([]);
   const [propinasStats, setPropinasStats] = useState<{
     total: number;
@@ -29,133 +51,309 @@ export default function Dashboard() {
   const [periodoPropinas, setPeriodoPropinas] = useState<'semana' | 'quincena' | 'mes'>('semana');
   const [showNuevaOrdenModal, setShowNuevaOrdenModal] = useState(false);
   const [tipoPedidoSeleccionado, setTipoPedidoSeleccionado] = useState<TipoPedido>(null);
+  
+  // Historial de órdenes
+  const [ordenesHistorial, setOrdenesHistorial] = useState<OrdenHistorial[]>([]);
+  const [filtroHistorial, setFiltroHistorial] = useState<'dia' | 'semana' | 'mes' | 'rango'>('dia');
+  const [fechaInicio, setFechaInicio] = useState<string>('');
+  const [fechaFin, setFechaFin] = useState<string>('');
 
   useEffect(() => {
-    async function loadData() {
+    loadData();
+  }, [periodoPropinas, filtroHistorial, fechaInicio, fechaFin]);
+
+  async function loadData() {
+    try {
+      // Verificar autenticación
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authUser) {
+        window.location.href = '/admin/login';
+        return;
+      }
+
+      // Obtener perfil de usuario
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profile) {
+        setUser(profile);
+      }
+
+      // Cargar KPIs básicos
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      // Ventas de hoy
+      const { data: ordenesHoy, error: errorVentas } = await supabase
+        .from('ordenes_restaurante')
+        .select('total')
+        .eq('estado', 'paid')
+        .gte('created_at', hoy.toISOString());
+
+      if (errorVentas) console.error('Error cargando ventas:', errorVentas);
+      const ventasHoy = ordenesHoy?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+
+      // Ventas del mes
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      const { data: ordenesMes, error: errorVentasMes } = await supabase
+        .from('ordenes_restaurante')
+        .select('total')
+        .eq('estado', 'paid')
+        .gte('created_at', inicioMes.toISOString());
+
+      if (errorVentasMes) console.error('Error cargando ventas del mes:', errorVentasMes);
+      const ventasMes = ordenesMes?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
+
+      // Órdenes pendientes
+      const { count: ordenesPendientes, error: errorPendientes } = await supabase
+        .from('ordenes_restaurante')
+        .select('*', { count: 'exact', head: true })
+        .in('estado', ['pending', 'preparing', 'ready']);
+
+      if (errorPendientes) {
+        console.error('Error cargando órdenes pendientes:', errorPendientes);
+      }
+
+      // Cargar ventas por item del día
+      await loadVentasPorItem(hoy);
+
+      // Verificar stock bajo (ingredientes y stock_panes_bebidas)
+      await loadStockBajo();
+
+      setKpis({
+        ventasHoy,
+        ordenesPendientes: ordenesPendientes || 0,
+        ventasMes,
+        productosStockBajo: stockBajo.length,
+      });
+
+      // Cargar historial de órdenes
+      await loadHistorialOrdenes();
+
+      // Cargar estadísticas de propinas
       try {
-        // Verificar autenticación
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !authUser) {
-          window.location.href = '/admin/login';
-          return;
+        const stats = await obtenerEstadisticasPropinas(periodoPropinas);
+        setPropinasStats(stats);
+      } catch (error) {
+        console.error('Error cargando estadísticas de propinas:', error);
+      }
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadVentasPorItem(fechaInicio: Date) {
+    try {
+      // Obtener todas las órdenes pagadas del día
+      const { data: ordenes, error: errorOrdenes } = await supabase
+        .from('ordenes_restaurante')
+        .select('id')
+        .eq('estado', 'paid')
+        .gte('created_at', fechaInicio.toISOString());
+
+      if (errorOrdenes || !ordenes || ordenes.length === 0) {
+        setVentasPorItem([]);
+        return;
+      }
+
+      const ordenIds = ordenes.map(o => o.id);
+
+      // Obtener items de las órdenes con información del menú
+      const { data: items, error: errorItems } = await supabase
+        .from('orden_items')
+        .select(`
+          cantidad,
+          subtotal,
+          menu_items (
+            id,
+            name,
+            categories (
+              id,
+              slug,
+              name
+            )
+          )
+        `)
+        .in('orden_id', ordenIds);
+
+      if (errorItems) {
+        console.error('Error cargando items:', errorItems);
+        setVentasPorItem([]);
+        return;
+      }
+
+      // Agrupar por item y categoría
+      const ventasMap = new Map<string, VentasPorItem>();
+
+      items?.forEach((item: any) => {
+        const menuItem = item.menu_items;
+        if (!menuItem) return;
+
+        const categoria = menuItem.categories?.slug || menuItem.categories?.name || 'Otros';
+        const nombre = menuItem.name;
+        const key = `${nombre}_${categoria}`;
+
+        if (ventasMap.has(key)) {
+          const existente = ventasMap.get(key)!;
+          existente.cantidad += item.cantidad;
+          existente.total += item.subtotal;
+        } else {
+          ventasMap.set(key, {
+            nombre,
+            categoria,
+            cantidad: item.cantidad,
+            total: item.subtotal,
+          });
         }
+      });
 
-        // Obtener perfil de usuario
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
+      // Convertir a array y ordenar por cantidad
+      const ventasArray = Array.from(ventasMap.values()).sort((a, b) => b.cantidad - a.cantidad);
+      setVentasPorItem(ventasArray);
+    } catch (error) {
+      console.error('Error cargando ventas por item:', error);
+      setVentasPorItem([]);
+    }
+  }
 
-        if (profile) {
-          setUser(profile);
-        }
+  async function loadStockBajo() {
+    try {
+      // Stock de ingredientes
+      const { data: ingredientes, error: errorIngredientes } = await supabase
+        .from('ingredientes')
+        .select('id, nombre, stock_actual, stock_minimo, unidad_medida')
+        .not('stock_minimo', 'is', null);
 
-        // Cargar KPIs básicos
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
+      const stockBajoList: Array<{
+        id: string;
+        nombre: string;
+        stock_actual: number;
+        stock_minimo: number;
+        unidad_medida: string;
+        tipo?: string;
+      }> = [];
 
-        // Ventas de hoy
-        const { data: ordenesHoy, error: errorVentas } = await supabase
-          .from('ordenes_restaurante')
-          .select('total')
-          .eq('estado', 'paid')
-          .gte('created_at', hoy.toISOString());
+      if (!errorIngredientes && ingredientes) {
+        ingredientes
+          .filter((ing) => ing.stock_actual <= ing.stock_minimo)
+          .forEach((ing) => {
+            stockBajoList.push({
+              id: ing.id,
+              nombre: ing.nombre,
+              stock_actual: ing.stock_actual,
+              stock_minimo: ing.stock_minimo,
+              unidad_medida: ing.unidad_medida,
+              tipo: 'ingrediente',
+            });
+          });
+      }
 
-        if (errorVentas) console.error('Error cargando ventas:', errorVentas);
-        const ventasHoy = ordenesHoy?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
-
-        // Órdenes pendientes
-        const { count: ordenesPendientes, error: errorPendientes } = await supabase
-          .from('ordenes_restaurante')
-          .select('*', { count: 'exact', head: true })
-          .in('estado', ['pending', 'preparing', 'ready']);
-
-        if (errorPendientes) {
-          console.error('Error cargando órdenes pendientes:', errorPendientes);
-        }
-
-        // Mesas ocupadas
-        const { count: mesasOcupadas, error: errorMesas } = await supabase
-          .from('mesas')
-          .select('*', { count: 'exact', head: true })
-          .eq('estado', 'ocupada');
-
-        if (errorMesas) {
-          console.error('Error cargando mesas:', errorMesas);
-        }
-
-        // Gastos del mes
-        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        const { data: gastosMes, error: errorGastosMes } = await supabase
-          .from('small_expenses')
-          .select('monto')
-          .gte('fecha', inicioMes.toISOString().split('T')[0]);
-
-        if (errorGastosMes) console.error('Error cargando gastos pequeños:', errorGastosMes);
-
-        const { data: gastosGenerales, error: errorGastosGen } = await supabase
-          .from('general_expenses')
-          .select('monto')
-          .gte('fecha', inicioMes.toISOString().split('T')[0]);
-
-        if (errorGastosGen) console.error('Error cargando gastos generales:', errorGastosGen);
-
-        const totalGastos = 
-          (gastosMes?.reduce((sum, g) => sum + (g.monto || 0), 0) || 0) +
-          (gastosGenerales?.reduce((sum, g) => sum + (g.monto || 0), 0) || 0);
-
-        // Verificar stock bajo
-        const { data: ingredientes, error: errorStock } = await supabase
-          .from('ingredientes')
-          .select('id, nombre, stock_actual, stock_minimo, unidad_medida')
+      // Stock de panes y bebidas
+      try {
+        const { data: stockPanesBebidas, error: errorStockPB } = await supabase
+          .from('stock_panes_bebidas')
+          .select('id, nombre, cantidad, stock_minimo, unidad_medida, tipo')
           .not('stock_minimo', 'is', null);
 
-        if (errorStock) {
-          console.error('Error cargando stock:', errorStock);
-        } else {
-          // Filtrar ingredientes con stock bajo (stock_actual <= stock_minimo)
-          const stockBajoList = ingredientes?.filter(
-            (ing) => ing.stock_actual <= ing.stock_minimo
-          ) || [];
-          setStockBajo(stockBajoList);
-        }
-
-        setKpis({
-          ventasHoy,
-          ordenesPendientes: ordenesPendientes || 0,
-          mesasOcupadas: mesasOcupadas || 0,
-          gastosMes: totalGastos,
-        });
-
-        // Cargar estadísticas de propinas
-        try {
-          const stats = await obtenerEstadisticasPropinas(periodoPropinas);
-          setPropinasStats(stats);
-        } catch (error) {
-          console.error('Error cargando estadísticas de propinas:', error);
+        if (!errorStockPB && stockPanesBebidas) {
+          stockPanesBebidas
+            .filter((item) => item.cantidad <= item.stock_minimo)
+            .forEach((item) => {
+              stockBajoList.push({
+                id: item.id,
+                nombre: item.nombre,
+                stock_actual: item.cantidad,
+                stock_minimo: item.stock_minimo,
+                unidad_medida: item.unidad_medida,
+                tipo: item.tipo,
+              });
+            });
         }
       } catch (error) {
-        console.error('Error cargando datos:', error);
-      } finally {
-        setLoading(false);
+        // Tabla puede no existir, ignorar
+        console.log('Tabla stock_panes_bebidas no disponible');
       }
+
+      setStockBajo(stockBajoList);
+    } catch (error) {
+      console.error('Error cargando stock bajo:', error);
+      setStockBajo([]);
     }
+  }
 
-    loadData();
-  }, [periodoPropinas]);
+  async function loadHistorialOrdenes() {
+    try {
+      let query = supabase
+        .from('ordenes_restaurante')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/admin/login';
-  };
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+
+      if (filtroHistorial === 'dia') {
+        query = query.gte('created_at', hoy.toISOString());
+      } else if (filtroHistorial === 'semana') {
+        const semana = new Date();
+        semana.setDate(semana.getDate() - 7);
+        query = query.gte('created_at', semana.toISOString());
+      } else if (filtroHistorial === 'mes') {
+        const mes = new Date();
+        mes.setDate(1);
+        mes.setHours(0, 0, 0, 0);
+        query = query.gte('created_at', mes.toISOString());
+      } else if (filtroHistorial === 'rango' && fechaInicio && fechaFin) {
+        const inicio = new Date(fechaInicio);
+        inicio.setHours(0, 0, 0, 0);
+        const fin = new Date(fechaFin);
+        fin.setHours(23, 59, 59, 999);
+        query = query.gte('created_at', inicio.toISOString()).lte('created_at', fin.toISOString());
+      }
+
+      const { data: ordenesData, error: ordenesError } = await query;
+
+      if (ordenesError) throw ordenesError;
+
+      // Obtener información de mesas por separado
+      const mesaIds = ordenesData?.filter(o => o.mesa_id).map(o => o.mesa_id) || [];
+      const mesasMap = new Map();
+
+      if (mesaIds.length > 0) {
+        const { data: mesasData } = await supabase
+          .from('mesas')
+          .select('id, numero')
+          .in('id', mesaIds);
+
+        if (mesasData) {
+          mesasData.forEach((mesa: any) => {
+            mesasMap.set(mesa.id, mesa);
+          });
+        }
+      }
+
+      const ordenesConMesas = ordenesData?.map((orden: any) => ({
+        ...orden,
+        mesas: orden.mesa_id ? mesasMap.get(orden.mesa_id) : null,
+      })) || [];
+
+      setOrdenesHistorial(ordenesConMesas);
+    } catch (error) {
+      console.error('Error cargando historial de órdenes:', error);
+      setOrdenesHistorial([]);
+    }
+  }
 
   async function crearNuevaOrden(tipoPedido: TipoPedido) {
     try {
       console.log('🔄 Creando nueva orden desde Dashboard, tipo:', tipoPedido);
       
-      // Cerrar el modal primero
       setShowNuevaOrdenModal(false);
       
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -165,15 +363,10 @@ export default function Dashboard() {
         return;
       }
 
-      console.log('✅ Usuario autenticado:', user.id);
-
-      // Generar número de orden único
       const timestamp = Date.now();
       const numeroOrden = tipoPedido === 'llevar' 
         ? `TAKE-${timestamp}` 
         : `ORD-${timestamp}`;
-
-      console.log('📝 Número de orden generado:', numeroOrden);
 
       const ordenData = {
         numero_orden: numeroOrden,
@@ -184,8 +377,6 @@ export default function Dashboard() {
         total: 0,
       };
 
-      console.log('📤 Datos a insertar:', ordenData);
-
       const { data: orden, error: insertError } = await supabase
         .from('ordenes_restaurante')
         .insert(ordenData)
@@ -194,29 +385,33 @@ export default function Dashboard() {
 
       if (insertError) {
         console.error('❌ Error insertando orden:', insertError);
-        
-        if (insertError.code === 'PGRST301' || insertError.message?.includes('permission') || insertError.message?.includes('policy')) {
-          alert(`❌ Error de permisos: No tienes permisos para crear órdenes.\n\nVerifica que tu usuario tenga rol de admin, encargado o mesero en la tabla users.\n\nError: ${insertError.message}`);
-        } else {
-          alert(`❌ Error creando orden: ${insertError.message}\n\nCódigo: ${insertError.code}\n\nSi el problema persiste, verifica los permisos RLS en Supabase.`);
-        }
+        alert(`❌ Error creando orden: ${insertError.message}`);
         return;
       }
 
       if (!orden) {
-        console.error('❌ No se recibió la orden creada');
-        alert('❌ Error: La orden se creó pero no se recibió la respuesta. Intenta recargar la página.');
+        alert('❌ Error: La orden se creó pero no se recibió la respuesta.');
         return;
       }
 
-      console.log('✅ Orden creada exitosamente:', orden.id);
-      
-      // Redirigir a la orden creada
       window.location.href = `/admin/ordenes/${orden.id}`;
     } catch (error: any) {
       console.error('❌ Error inesperado creando orden:', error);
-      alert(`❌ Error inesperado: ${error.message || 'Error desconocido'}\n\nRevisa la consola del navegador (F12) para más detalles.`);
+      alert(`❌ Error inesperado: ${error.message || 'Error desconocido'}`);
     }
+  }
+
+  function getCategoriaNombre(slug: string): string {
+    const nombres: Record<string, string> = {
+      'completos': 'Completos',
+      'sandwiches': 'Sandwiches',
+      'bebidas': 'Bebidas',
+      'bebestibles': 'Bebidas',
+      'acompanamientos': 'Acompañamientos',
+      'pollo': 'Pollo',
+      'destacados': 'Destacados',
+    };
+    return nombres[slug] || slug;
   }
 
   if (loading) {
@@ -230,6 +425,7 @@ export default function Dashboard() {
   return (
     <div className="w-full">
       <main className="w-full">
+        {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
           <KpiCard
             title="Ventas de Hoy"
@@ -242,15 +438,182 @@ export default function Dashboard() {
             icon="📋"
           />
           <KpiCard
-            title="Mesas Ocupadas"
-            value={kpis.mesasOcupadas}
-            icon="🪑"
+            title="Ventas del Mes"
+            value={formatCLP(kpis.ventasMes)}
+            icon="📊"
           />
           <KpiCard
-            title="Gastos del Mes"
-            value={formatCLP(kpis.gastosMes)}
-            icon="💸"
+            title="Productos Stock Bajo"
+            value={kpis.productosStockBajo}
+            icon="⚠️"
           />
+        </div>
+
+        {/* Ventas por Item del Día */}
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
+          <h2 className="text-base sm:text-lg font-semibold mb-4">📈 Ventas del Día por Item</h2>
+          {ventasPorItem.length === 0 ? (
+            <div className="text-sm text-slate-500 text-center py-4">
+              No hay ventas registradas hoy
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left p-2 font-semibold">Item</th>
+                    <th className="text-left p-2 font-semibold">Categoría</th>
+                    <th className="text-right p-2 font-semibold">Cantidad</th>
+                    <th className="text-right p-2 font-semibold">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ventasPorItem.map((item, index) => (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="p-2">{item.nombre}</td>
+                      <td className="p-2 text-slate-600">{getCategoriaNombre(item.categoria)}</td>
+                      <td className="p-2 text-right font-semibold">{item.cantidad}</td>
+                      <td className="p-2 text-right font-semibold">{formatCLP(item.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Historial de Órdenes */}
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <h2 className="text-base sm:text-lg font-semibold">📋 Historial de Órdenes</h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFiltroHistorial('dia')}
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
+                  filtroHistorial === 'dia'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Día
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('semana')}
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
+                  filtroHistorial === 'semana'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Semana
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('mes')}
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
+                  filtroHistorial === 'mes'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Mes
+              </button>
+              <button
+                onClick={() => setFiltroHistorial('rango')}
+                className={`px-3 py-1 text-xs sm:text-sm rounded ${
+                  filtroHistorial === 'rango'
+                    ? 'bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Rango
+              </button>
+            </div>
+          </div>
+
+          {filtroHistorial === 'rango' && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded text-sm"
+              />
+              <input
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded text-sm"
+              />
+            </div>
+          )}
+
+          {ordenesHistorial.length === 0 ? (
+            <div className="text-sm text-slate-500 text-center py-4">
+              No hay órdenes en el período seleccionado
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left p-2 font-semibold">Orden</th>
+                    <th className="text-left p-2 font-semibold">Fecha</th>
+                    <th className="text-left p-2 font-semibold">Mesa/Tipo</th>
+                    <th className="text-left p-2 font-semibold">Estado</th>
+                    <th className="text-right p-2 font-semibold">Total</th>
+                    <th className="text-left p-2 font-semibold">Pago</th>
+                    <th className="text-left p-2 font-semibold">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordenesHistorial.map((orden) => (
+                    <tr key={orden.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="p-2 font-medium">{orden.numero_orden}</td>
+                      <td className="p-2 text-slate-600">
+                        {new Date(orden.created_at).toLocaleDateString('es-CL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                      <td className="p-2 text-slate-600">
+                        {orden.mesas?.numero 
+                          ? `Mesa ${orden.mesas.numero}`
+                          : orden.tipo_pedido === 'barra'
+                          ? 'Barra'
+                          : orden.tipo_pedido === 'llevar'
+                          ? 'Para Llevar'
+                          : '-'}
+                      </td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          orden.estado === 'paid' ? 'bg-green-100 text-green-800' :
+                          orden.estado === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          orden.estado === 'preparing' ? 'bg-blue-100 text-blue-800' :
+                          orden.estado === 'ready' ? 'bg-purple-100 text-purple-800' :
+                          'bg-slate-100 text-slate-800'
+                        }`}>
+                          {orden.estado}
+                        </span>
+                      </td>
+                      <td className="p-2 text-right font-semibold">{formatCLP(orden.total)}</td>
+                      <td className="p-2 text-slate-600">{orden.metodo_pago || '-'}</td>
+                      <td className="p-2">
+                        <a
+                          href={`/admin/ordenes/${orden.id}`}
+                          className="text-blue-600 hover:text-blue-800 underline text-xs"
+                        >
+                          Ver
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Sección de Creación Rápida de Pedidos */}
@@ -436,22 +799,25 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {stockBajo.map((ing) => (
+                {stockBajo.map((item) => (
                   <div
-                    key={ing.id}
+                    key={item.id}
                     className="p-2 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-xs sm:text-sm text-yellow-900">
-                          ⚠️ {ing.nombre}
+                          ⚠️ {item.nombre}
+                          {item.tipo && (
+                            <span className="ml-2 text-xs text-yellow-700">({item.tipo})</span>
+                          )}
                         </div>
                         <div className="text-xs text-yellow-700 mt-1">
-                          Stock: {ing.stock_actual} {ing.unidad_medida} / Mínimo: {ing.stock_minimo} {ing.unidad_medida}
+                          Stock: {item.stock_actual} {item.unidad_medida} / Mínimo: {item.stock_minimo} {item.unidad_medida}
                         </div>
                       </div>
                       <a
-                        href="/admin/stock"
+                        href={item.tipo === 'pan' || item.tipo === 'bebida' ? "/admin/stock-panes-bebidas" : "/admin/stock"}
                         className="ml-2 text-xs text-yellow-800 hover:text-yellow-900 underline flex-shrink-0"
                       >
                         Ver
@@ -543,4 +909,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
