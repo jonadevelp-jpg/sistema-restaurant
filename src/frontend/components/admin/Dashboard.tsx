@@ -52,6 +52,10 @@ export default function Dashboard() {
   const [showNuevaOrdenModal, setShowNuevaOrdenModal] = useState(false);
   const [tipoPedidoSeleccionado, setTipoPedidoSeleccionado] = useState<TipoPedido>(null);
   
+  // Visibilidad de KPIs de ventas (seguridad)
+  const [mostrarVentasHoy, setMostrarVentasHoy] = useState(true);
+  const [mostrarVentasMes, setMostrarVentasMes] = useState(true);
+  
   // Historial de órdenes
   const [ordenesHistorial, setOrdenesHistorial] = useState<OrdenHistorial[]>([]);
   const [totalVentasHistorial, setTotalVentasHistorial] = useState<number>(0);
@@ -464,21 +468,76 @@ export default function Dashboard() {
       <main className="w-full">
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
-          <KpiCard
-            title="Ventas de Hoy"
-            value={formatCLP(kpis.ventasHoy)}
-            icon="💰"
-          />
+          {/* Ventas de Hoy con ojo */}
+          <div 
+            className="bg-white rounded-2xl p-6 relative"
+            style={{
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-sm text-slate-500 mb-2 font-medium font-sans flex items-center gap-2">
+                  Ventas de Hoy
+                  <button
+                    onClick={() => setMostrarVentasHoy(!mostrarVentasHoy)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={mostrarVentasHoy ? 'Ocultar ventas' : 'Mostrar ventas'}
+                  >
+                    {mostrarVentasHoy ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                <div className="text-3xl font-bold text-slate-900 font-sans tracking-tight">
+                  {mostrarVentasHoy ? formatCLP(kpis.ventasHoy) : '******'}
+                </div>
+              </div>
+              <div 
+                className="text-4xl opacity-40"
+                style={{ filter: 'grayscale(20%)' }}
+              >
+                💰
+              </div>
+            </div>
+          </div>
+          
           <KpiCard
             title="Órdenes Pendientes"
             value={kpis.ordenesPendientes}
             icon="📋"
           />
-          <KpiCard
-            title="Ventas del Mes"
-            value={formatCLP(kpis.ventasMes)}
-            icon="📊"
-          />
+          
+          {/* Ventas del Mes con ojo */}
+          <div 
+            className="bg-white rounded-2xl p-6 relative"
+            style={{
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="text-sm text-slate-500 mb-2 font-medium font-sans flex items-center gap-2">
+                  Ventas del Mes
+                  <button
+                    onClick={() => setMostrarVentasMes(!mostrarVentasMes)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={mostrarVentasMes ? 'Ocultar ventas' : 'Mostrar ventas'}
+                  >
+                    {mostrarVentasMes ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                <div className="text-3xl font-bold text-slate-900 font-sans tracking-tight">
+                  {mostrarVentasMes ? formatCLP(kpis.ventasMes) : '******'}
+                </div>
+              </div>
+              <div 
+                className="text-4xl opacity-40"
+                style={{ filter: 'grayscale(20%)' }}
+              >
+                📊
+              </div>
+            </div>
+          </div>
+          
           <KpiCard
             title="Productos Stock Bajo"
             value={kpis.productosStockBajo}
