@@ -90,13 +90,10 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
     try {
       setLoading(true);
-      // Cargar orden con información de mesa (manejar caso donde mesa_id puede ser NULL)
+      // Cargar orden
       const { data: ordenData, error: ordenError } = await supabase
         .from('ordenes_restaurante')
-        .select(`
-          *,
-          mesas:mesa_id(numero)
-        `)
+        .select('*')
         .eq('id', ordenId)
         .single();
 
@@ -112,8 +109,20 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       }
 
       setOrden(ordenData);
-      if (ordenData.mesas) {
-        setMesaInfo(ordenData.mesas);
+      
+      // Cargar información de mesa por separado si existe mesa_id
+      if (ordenData.mesa_id) {
+        const { data: mesaData } = await supabase
+          .from('mesas')
+          .select('numero')
+          .eq('id', ordenData.mesa_id)
+          .single();
+        
+        if (mesaData) {
+          setMesaInfo(mesaData);
+        }
+      } else {
+        setMesaInfo(null);
       }
 
       // Cargar items de la orden
