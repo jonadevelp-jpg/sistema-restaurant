@@ -14,7 +14,10 @@ export class OrdersQueries {
   async getById(ordenId: string): Promise<Orden | null> {
     const { data, error } = await this.supabase
       .from('ordenes_restaurante')
-      .select('*, mesas(numero)')
+      .select(`
+        *,
+        mesas:mesa_id(numero)
+      `)
       .eq('id', ordenId)
       .single();
 
@@ -33,7 +36,10 @@ export class OrdersQueries {
       .from('ordenes_restaurante')
       .update(updateData)
       .eq('id', ordenId)
-      .select('*, mesas(numero)')
+      .select(`
+        *,
+        mesas:mesa_id(numero)
+      `)
       .single();
 
     if (error) {

@@ -65,3 +65,4 @@ Como Vercel está conectado a `upstream` (jonadevelp-jpg) y no tienes permisos:
 4. Desconecta el repositorio actual
 5. Conecta `idocstoreapp/sistema-restaurant` (origin)
 
+

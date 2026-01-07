@@ -35,31 +35,56 @@ export default function MesasView() {
 
   async function loadData() {
     try {
-      const [mesasRes, ordenesRes, paraLlevarRes] = await Promise.all([
-        supabase.from('mesas').select('*').order('numero'),
-        supabase
-          .from('ordenes_restaurante')
-          .select('*')
-          .in('estado', ['pending', 'preparing', 'ready'])
-          .not('mesa_id', 'is', null)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('ordenes_restaurante')
-          .select('*')
-          .in('estado', ['pending', 'preparing', 'ready'])
-          .is('mesa_id', null)
-          .order('created_at', { ascending: false }),
-      ]);
+      setLoading(true);
+      
+      // Cargar mesas
+      const mesasRes = await supabase.from('mesas').select('*').order('numero');
+      
+      if (mesasRes.error) {
+        console.error('Error cargando mesas:', mesasRes.error);
+        alert('Error cargando mesas: ' + mesasRes.error.message);
+        setMesas([]);
+      } else {
+        setMesas(mesasRes.data || []);
+      }
 
-      if (mesasRes.data) setMesas(mesasRes.data);
-      if (ordenesRes.data) setOrdenes(ordenesRes.data);
-      if (paraLlevarRes.data) setOrdenesParaLlevar(paraLlevarRes.data);
+      // Cargar órdenes con mesa (usando filtro diferente)
+      const ordenesRes = await supabase
+        .from('ordenes_restaurante')
+        .select('*')
+        .in('estado', ['pending', 'preparing', 'ready'])
+        .order('created_at', { ascending: false });
+
+      let ordenesConMesa: Orden[] = [];
+      if (ordenesRes.error) {
+        console.error('Error cargando órdenes:', ordenesRes.error);
+      } else if (ordenesRes.data) {
+        // Filtrar órdenes que tienen mesa_id (no null)
+        ordenesConMesa = ordenesRes.data.filter((o: any) => o.mesa_id !== null) as Orden[];
+        setOrdenes(ordenesConMesa);
+      }
+
+      // Cargar órdenes para llevar (sin mesa)
+      const paraLlevarRes = await supabase
+        .from('ordenes_restaurante')
+        .select('*')
+        .in('estado', ['pending', 'preparing', 'ready'])
+        .order('created_at', { ascending: false });
+
+      let ordenesParaLlevarData: Orden[] = [];
+      if (paraLlevarRes.error) {
+        console.error('Error cargando órdenes para llevar:', paraLlevarRes.error);
+      } else if (paraLlevarRes.data) {
+        // Filtrar órdenes que NO tienen mesa_id (null)
+        ordenesParaLlevarData = paraLlevarRes.data.filter((o: any) => o.mesa_id === null) as Orden[];
+        setOrdenesParaLlevar(ordenesParaLlevarData);
+      }
 
       // Actualizar estado de mesas según órdenes activas
       // IMPORTANTE: Solo actualizar en la UI, no sobrescribir el estado de la BD
       // El estado en la BD se actualiza cuando se cancela/elimina una orden
-      if (mesasRes.data && ordenesRes.data) {
-        const mesasConOrden = new Set(ordenesRes.data.map((o) => o.mesa_id));
+      if (mesasRes.data && ordenesConMesa.length > 0) {
+        const mesasConOrden = new Set(ordenesConMesa.map((o) => o.mesa_id));
         const mesasActualizadas = mesasRes.data.map((m) => {
           // Si la mesa tiene una orden activa, mostrar como ocupada
           // Pero respetar el estado de la BD si no hay orden activa
@@ -75,8 +100,9 @@ export default function MesasView() {
         // Si no hay órdenes activas, usar el estado de la BD directamente
         setMesas(mesasRes.data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cargando datos:', error);
+      alert('Error cargando datos: ' + (error.message || 'Error desconocido'));
     } finally {
       setLoading(false);
     }
@@ -147,8 +173,14 @@ export default function MesasView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
-        {mesas.map((mesa) => {
+      {mesas.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow-md">
+          <p className="text-slate-600 text-lg mb-4">No hay mesas configuradas</p>
+          <p className="text-slate-500 text-sm">Por favor, configura las mesas en la base de datos</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+          {mesas.map((mesa) => {
           const orden = getMesaOrden(mesa.id);
           const estado = orden ? 'ocupada' : mesa.estado;
           return (
@@ -194,7 +226,8 @@ export default function MesasView() {
             </button>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {showOrdenForm && selectedMesa && (
         <OrdenFormModal

@@ -76,3 +76,4 @@ Luego actualiza TODAS las políticas RLS para usar estas funciones en lugar de c
 
 
 
+

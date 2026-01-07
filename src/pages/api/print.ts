@@ -34,7 +34,10 @@ export const POST: APIRoute = async (context) => {
     // Obtener orden
     const { data: orden, error: ordenError } = await authSupabase
       .from('ordenes_restaurante')
-      .select('*, mesas(numero)')
+      .select(`
+        *,
+        mesas:mesa_id(numero)
+      `)
       .eq('id', ordenId)
       .single();
     

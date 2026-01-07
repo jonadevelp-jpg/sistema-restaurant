@@ -28,13 +28,11 @@ export default function OrdenesListView() {
   async function loadOrdenes() {
     try {
       setLoading(true);
+      
+      // Primero obtener las órdenes sin la relación de mesas
       let query = supabase
         .from('ordenes_restaurante')
-        .select(`
-          *,
-          mesas(numero),
-          users!ordenes_restaurante_mesero_id_fkey(id, name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Filtro por estado
@@ -58,10 +56,39 @@ export default function OrdenesListView() {
         query = query.gte('created_at', mes.toISOString());
       }
 
-      const { data, error } = await query.limit(100);
+      const { data: ordenesData, error: ordenesError } = await query.limit(100);
 
-      if (error) throw error;
-      setOrdenes(data || []);
+      if (ordenesError) {
+        console.error('Error cargando órdenes:', ordenesError);
+        throw ordenesError;
+      }
+      
+      // Obtener información de mesas por separado
+      const mesaIds = ordenesData?.filter(o => o.mesa_id).map(o => o.mesa_id).filter(Boolean) || [];
+      const mesasMap = new Map();
+      
+      if (mesaIds.length > 0) {
+        const { data: mesasData, error: mesasError } = await supabase
+          .from('mesas')
+          .select('id, numero')
+          .in('id', mesaIds);
+        
+        if (mesasError) {
+          console.error('Error cargando mesas:', mesasError);
+        } else if (mesasData) {
+          mesasData.forEach(mesa => {
+            mesasMap.set(mesa.id, mesa);
+          });
+        }
+      }
+      
+      // Combinar datos
+      const ordenesConMesas = ordenesData?.map(orden => ({
+        ...orden,
+        mesas: orden.mesa_id ? mesasMap.get(orden.mesa_id) : null
+      })) || [];
+      
+      setOrdenes(ordenesConMesas);
     } catch (error: any) {
       alert('Error cargando órdenes: ' + error.message);
     } finally {

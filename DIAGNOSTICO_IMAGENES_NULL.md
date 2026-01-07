@@ -126,3 +126,4 @@ Si todos los logs muestran `hasImage: true` pero la imagen no se muestra, el pro
 
 
 
+

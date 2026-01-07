@@ -191,3 +191,4 @@ UPDATE categories SET image_url = 'TU_URL_AQUI' WHERE id = 6; -- Bebidas
 
 
 
+

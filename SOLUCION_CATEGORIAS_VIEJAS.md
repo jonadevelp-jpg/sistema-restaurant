@@ -112,3 +112,4 @@ SELECT name, slug FROM categories WHERE is_active = false;
 
 
 
+

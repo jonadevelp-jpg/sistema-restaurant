@@ -36,3 +36,4 @@ Se implementaron dos cambios:
 
 El servicio de impresión está diseñado para funcionar solo en servidores locales con impresoras físicas conectadas. En Vercel (producción), no hay impresoras disponibles, por lo que es correcto que el servicio no esté disponible.
 
+

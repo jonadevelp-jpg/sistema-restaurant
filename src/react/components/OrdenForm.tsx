@@ -90,10 +90,13 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
     try {
       setLoading(true);
-      // Cargar orden con información de mesa
+      // Cargar orden con información de mesa (manejar caso donde mesa_id puede ser NULL)
       const { data: ordenData, error: ordenError } = await supabase
         .from('ordenes_restaurante')
-        .select('*, mesas(numero)')
+        .select(`
+          *,
+          mesas:mesa_id(numero)
+        `)
         .eq('id', ordenId)
         .single();
 
@@ -133,14 +136,14 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         })) || []
       );
 
-      // Cargar categorías (sin image_url ya que no existe en la tabla)
+      // Cargar categorías (con image_url si existe)
       let catsData = null;
       let catsError = null;
       
       // Intentar primero con order_num
       let query = supabase
         .from('categories')
-        .select('id, name, slug')
+        .select('id, name, slug, image_url')
         .eq('is_active', true);
       
       try {
@@ -154,7 +157,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         try {
           const result2 = await supabase
             .from('categories')
-            .select('id, name, slug')
+            .select('id, name, slug, image_url')
             .eq('is_active', true);
           catsData = result2.data;
           catsError = result2.error;
@@ -163,7 +166,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           // Si falla, intentar sin filtro is_active
           const result3 = await supabase
             .from('categories')
-            .select('id, name, slug');
+            .select('id, name, slug, image_url');
           catsData = result3.data;
           catsError = result3.error;
         }
@@ -188,7 +191,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
           // Intentar cargar todas las categorías sin filtro
           const { data: allCats, error: allCatsError } = await supabase
             .from('categories')
-            .select('id, name, slug');
+            .select('id, name, slug, image_url');
           
           if (!allCatsError && allCats && allCats.length > 0) {
             console.log('Categorías cargadas (sin filtro is_active):', allCats);
@@ -219,14 +222,20 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     // Verificar si necesita personalización
     const category = categories.find(c => c.id === menuItem.category_id);
     const categorySlug = category?.slug?.toLowerCase() || '';
+    
+    // Bebidas NO necesitan personalización - agregar directamente
+    if (categorySlug === 'bebidas' || categorySlug === 'bebestibles') {
+      addItemWithPersonalization(menuItem, null);
+      return;
+    }
+    
+    // Otras categorías que sí necesitan personalización
     const needsPersonalization = 
       categorySlug === 'menu-del-dia' || 
       categorySlug === 'shawarmas' || 
       categorySlug === 'shawarma' ||
       categorySlug === 'promociones' ||
-      categorySlug === 'promocion' ||
-      categorySlug === 'bebestibles' ||
-      categorySlug === 'bebidas';
+      categorySlug === 'promocion';
 
     if (needsPersonalization) {
       setSelectedMenuItem(menuItem);
@@ -742,54 +751,43 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     return filtered;
   })();
 
-  // Función para obtener imagen de categoría (similar al menú público)
-  function getCategoryImage(category: { slug: string; name?: string }): string {
+  // Función para obtener imagen de categoría (usando hero-*.png como en el menú digital)
+  function getCategoryImage(category: { slug: string; name?: string; image_url?: string }): string {
+    // Si la categoría tiene image_url, usarlo primero (puede ser URL de Supabase Storage o ruta relativa)
+    if (category.image_url) {
+      // Si es una URL completa (Supabase Storage), usarla directamente
+      if (category.image_url.startsWith('http://') || category.image_url.startsWith('https://')) {
+        return category.image_url;
+      }
+      // Si es una ruta relativa, usarla
+      return category.image_url;
+    }
     
-    // Normalizar slug para comparación (sin tildes, minúsculas)
-    const normalizedSlug = category.slug?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
-    const categoryName = category.name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
-    
-    const categoryImageMap: Record<string, string> = {
-      'entradas': '/entradas/entrada.png',
-      'platillos': '/platillos/platillos.png',
-      'shawarmas': '/shawarmas/shawarmas.png',
-      'shawarma': '/shawarmas/shawarmas.png',
-      'promociones': '/shawarmas/shawarmas.png',
-      'bebestibles': '/bebestibles/bebestibles.png',
-      'bebidas': '/bebestibles/bebestibles.png',
-      'postres': '/postres/postre.png',
-      'acompañamientos': '/acompañamientos/salsas-acomp.png',
-      'acompanamientos': '/acompañamientos/salsas-acomp.png',
-      'menu-del-dia': '/menu-del.dia/menu-del-dia.png',
-      'menu-fin-de-ano': '/menu-fin-de-ano/menu-fin-ano.png',
-      'sandwich': '/sandwich.png',
-      'desayunos': '/desayuno.png',
-      'desayuno': '/desayuno.png',
+    // Si no hay image_url, usar hero-*.png
+    const heroMap: Record<string, string> = {
+      'destacados': '/her-destacados.png', // Nota: el archivo se llama "her-destacados.png" (sin la 'o')
+      'completos': '/hero-completos.png',
+      'sandwiches': '/hero-sandwich.png',
+      'acompanamientos': '/hero-acompañamientos.png',
+      'pollo': '/hero-pollos.png',
+      'bebidas': '/hero-bebidas.png',
     };
     
-    // Buscar por slug exacto
-    if (categoryImageMap[category.slug]) {
-      return categoryImageMap[category.slug];
+    // Normalizar slug (sin acentos, minúsculas)
+    const normalizedSlug = category.slug?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
+    
+    // Buscar coincidencia exacta primero
+    if (heroMap[category.slug]) {
+      return heroMap[category.slug];
     }
     
     // Buscar por slug normalizado
-    if (categoryImageMap[normalizedSlug]) {
-      return categoryImageMap[normalizedSlug];
+    if (heroMap[normalizedSlug]) {
+      return heroMap[normalizedSlug];
     }
     
-    // Buscar por nombre si contiene palabras clave
-    if (categoryName.includes('acompañamiento') || categoryName.includes('acompanamiento')) {
-      return '/acompañamientos/salsas-acomp.png';
-    }
-    if (categoryName.includes('shawarma')) {
-      return '/shawarmas/shawarmas.png';
-    }
-    if (categoryName.includes('bebestible') || categoryName.includes('bebida')) {
-      return '/bebestibles/bebestibles.png';
-    }
-    
-    // Fallback
-    return '/fondo.png';
+    // Fallback: intentar construir el nombre del archivo
+    return `/hero-${normalizedSlug}.png`;
   }
 
   function handleCategorySelect(categorySlug: string) {
@@ -1018,20 +1016,9 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 console.error('Error cargando imagen de categoría:', cat.name, cat.slug, target.src);
-                                // Si falla, intentar con fondo.png
-                                if (!target.src.includes('fondo.png')) {
-                                  target.src = '/fondo.png';
-                                } else {
-                                  // Si fondo.png también falla, mostrar placeholder
-                                  target.style.display = 'none';
-                                  const parent = target.parentElement;
-                                  if (parent && !parent.querySelector('.placeholder-icon')) {
-                                    const placeholder = document.createElement('div');
-                                    placeholder.className = 'placeholder-icon absolute inset-0 flex items-center justify-center bg-slate-200';
-                                    placeholder.innerHTML = '<span class="text-4xl text-slate-400">🍽️</span>';
-                                    parent.appendChild(placeholder);
-                                  }
-                                }
+                                // Si falla, intentar con placeholder
+                                target.src = '/images/ui/placeholders/product-hero.svg';
+                                target.style.opacity = '0.3';
                               }}
                               onLoad={() => {
                                 console.log('Imagen cargada correctamente:', cat.name, categoryImage);
