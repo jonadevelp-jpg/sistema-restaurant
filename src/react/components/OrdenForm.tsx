@@ -702,6 +702,9 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
 
       setShowPagoModal(false);
       
+      // Recargar datos de la orden para obtener el metodo_pago actualizado
+      await loadData();
+      
       // Crear print_job para boleta automáticamente al pagar
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -733,7 +736,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         // No bloquear el flujo si falla la creación del print_job
       }
       
-      // Mostrar boleta antes de redirigir
+      // Mostrar boleta después de recargar los datos
       setShowBoleta(true);
     } catch (error: any) {
       alert('Error pagando orden: ' + error.message);
