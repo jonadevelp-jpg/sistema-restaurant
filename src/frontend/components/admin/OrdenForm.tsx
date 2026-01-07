@@ -462,8 +462,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
         console.log('[cancelarOrden] Orden sin mesa asignada, no se necesita liberar');
       }
 
-      // Redirigir a mesas
-      window.location.href = '/admin/mesas';
+      // Redirigir a pedidos
+      window.location.href = '/admin/pedidos';
     } catch (error: any) {
       console.error('[cancelarOrden] Error general:', error);
       alert('Error cancelando orden: ' + error.message);
@@ -832,8 +832,8 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     return (
       <div className="p-6">
         <div className="text-red-600">Orden no encontrada</div>
-        <a href="/admin/mesas" className="text-blue-600 hover:underline mt-2 inline-block">
-          Volver a Mesas
+        <a href="/admin/pedidos" className="text-blue-600 hover:underline mt-2 inline-block">
+          Volver a Pedidos
         </a>
       </div>
     );
@@ -1338,7 +1338,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
                 // Si la orden está pagada, redirigir después de imprimir boleta
                 if (orden.estado === 'paid') {
                   setTimeout(() => {
-                    window.location.href = '/admin/mesas';
+                    window.location.href = '/admin/pedidos';
                   }, 1000);
                 }
               }}

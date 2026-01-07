@@ -701,13 +701,13 @@ export default function Dashboard() {
               <span className="text-orange-600 group-hover:translate-x-1 transition-transform">→</span>
             </button>
             <a
-              href="/admin/mesas"
+              href="/admin/pedidos"
               className="flex items-center gap-3 p-4 border-2 border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all duration-200 text-left group"
             >
               <span className="text-2xl sm:text-3xl">🪑</span>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm sm:text-base text-slate-900">Gestionar Mesas</div>
-                <div className="text-xs sm:text-sm text-slate-600">Ver y crear órdenes por mesa</div>
+                <div className="font-semibold text-sm sm:text-base text-slate-900">Gestionar Pedidos</div>
+                <div className="text-xs sm:text-sm text-slate-600">Ver y crear órdenes</div>
               </div>
               <span className="text-slate-600 group-hover:translate-x-1 transition-transform">→</span>
             </a>
@@ -798,14 +798,14 @@ export default function Dashboard() {
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Accesos Rápidos</h2>
             <div className="space-y-2 sm:space-y-3">
               <a
-                href="/admin/mesas"
+                href="/admin/pedidos"
                 className="block p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="text-xl sm:text-2xl">🪑</span>
+                  <span className="text-xl sm:text-2xl">🛒</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm sm:text-base">Mesas (POS)</div>
-                    <div className="text-xs sm:text-sm text-slate-600">Gestionar mesas y crear órdenes</div>
+                    <div className="font-semibold text-sm sm:text-base">Pedidos (POS)</div>
+                    <div className="text-xs sm:text-sm text-slate-600">Gestionar y crear órdenes</div>
                   </div>
                 </div>
               </a>
