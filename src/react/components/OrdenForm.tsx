@@ -336,6 +336,9 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
     if (personalization.sinIngredientes && personalization.sinIngredientes.length > 0) {
       parts.push(`Sin: ${personalization.sinIngredientes.join(', ')}`);
     }
+    if (personalization.extras && personalization.extras.length > 0) {
+      parts.push(`Extras: ${personalization.extras.join(', ')}`);
+    }
     if (personalization.bebidas && personalization.bebidas.length > 0) {
       const bebidasText = personalization.bebidas.map((b: any) => {
         if (b.sabor) return `${b.nombre} (${b.sabor})`;
@@ -343,7 +346,7 @@ export default function OrdenForm({ ordenId }: OrdenFormProps) {
       }).join(', ');
       parts.push(`Bebida${personalization.bebidas.length > 1 ? 's' : ''}: ${bebidasText}`);
     }
-    if (personalization.detalles) parts.push(personalization.detalles);
+    if (personalization.detalles) parts.push(`Nota: ${personalization.detalles}`);
     return parts.join(' | ');
   }
 

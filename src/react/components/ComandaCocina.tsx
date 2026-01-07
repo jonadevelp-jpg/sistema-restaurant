@@ -219,6 +219,9 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
                       {personalization.sinIngredientes && personalization.sinIngredientes.length > 0 && (
                         <div>Sin: {personalization.sinIngredientes.join(', ')}</div>
                       )}
+                      {personalization.extras && personalization.extras.length > 0 && (
+                        <div>Extras: {personalization.extras.join(', ')}</div>
+                      )}
                       {personalization.bebidas && personalization.bebidas.length > 0 && (
                         <div>
                           Bebida{personalization.bebidas.length > 1 ? 's' : ''}:{' '}

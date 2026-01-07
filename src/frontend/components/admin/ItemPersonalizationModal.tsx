@@ -16,7 +16,8 @@ interface PersonalizationData {
   agregado?: string; // Para menú del día
   salsas?: string[]; // Para shawarmas y promociones
   bebidas?: Array<{ nombre: string; sabor?: string }>; // Para promociones y bebidas
-  sinIngredientes?: string[]; // Para shawarmas
+  sinIngredientes?: string[]; // Para shawarmas, completos, sandwiches y pollo
+  extras?: string[]; // Para completos, sandwiches y pollo
   detalles?: string; // Notas adicionales
 }
 
@@ -56,6 +57,26 @@ const INGREDIENTES_SHAWARMA = [
   'Zanahoria'
 ];
 
+// Ingredientes que se pueden quitar en completos, sandwiches y pollo
+const INGREDIENTES_COMUNES = [
+  'Tomate',
+  'Cebolla',
+  'Palta',
+  'Mayonesa',
+  'Mostaza',
+  'Lechuga'
+];
+
+// Extras para completos, sandwiches y pollo
+const EXTRAS = [
+  'Extra Mayonesa',
+  'Extra Mostaza',
+  'Extra Palta',
+  'Extra Tomate',
+  'Extra Cebolla',
+  'Extra Queso'
+];
+
 export default function ItemPersonalizationModal({
   menuItem,
   category,
@@ -79,6 +100,9 @@ export default function ItemPersonalizationModal({
   const isShawarma = categorySlug === 'shawarmas' || categorySlug === 'shawarma';
   const isPromocion = categorySlug === 'promociones' || categorySlug === 'promocion';
   const isBebida = categorySlug === 'bebestibles' || categorySlug === 'bebidas';
+  const isCompleto = categorySlug === 'completos' || categorySlug === 'completo';
+  const isSandwich = categorySlug === 'sandwiches' || categorySlug === 'sandwich';
+  const isPollo = categorySlug === 'pollo';
 
   const handleSalsaToggle = (salsa: string) => {
     const currentSalsas = personalization.salsas || [];
@@ -317,13 +341,73 @@ export default function ItemPersonalizationModal({
           </div>
         )}
 
+        {/* Completos, Sandwiches y Pollo - Personalización */}
+        {(isCompleto || isSandwich || isPollo) && (
+          <>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Quitar ingredientes:</label>
+              <div className="grid grid-cols-2 gap-2">
+                {INGREDIENTES_COMUNES.map((ingrediente) => (
+                  <button
+                    key={ingrediente}
+                    onClick={() => handleIngredienteToggle(ingrediente)}
+                    className={`p-2 border-2 rounded-lg text-sm ${
+                      personalization.sinIngredientes?.includes(ingrediente)
+                        ? 'border-red-600 bg-red-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    Sin {ingrediente}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Extras:</label>
+              <div className="grid grid-cols-2 gap-2">
+                {EXTRAS.map((extra) => {
+                  const extraKey = extra.toLowerCase().replace('extra ', '');
+                  const isSelected = personalization.extras?.includes(extra);
+                  return (
+                    <button
+                      key={extra}
+                      onClick={() => {
+                        const currentExtras = personalization.extras || [];
+                        if (currentExtras.includes(extra)) {
+                          setPersonalization({
+                            ...personalization,
+                            extras: currentExtras.filter(e => e !== extra)
+                          });
+                        } else {
+                          setPersonalization({
+                            ...personalization,
+                            extras: [...currentExtras, extra]
+                          });
+                        }
+                      }}
+                      className={`p-2 border-2 rounded-lg text-sm ${
+                        isSelected
+                          ? 'border-green-600 bg-green-50'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {extra}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Detalles adicionales */}
         <div className="mb-4">
           <label className="block text-sm font-semibold mb-2">Notas adicionales:</label>
           <textarea
             value={personalization.detalles || ''}
             onChange={(e) => setPersonalization({ ...personalization, detalles: e.target.value })}
-            placeholder="Ej: Sin cebolla, extra picante, etc."
+            placeholder="Ej: Sin cebolla, extra picante, bien cocido, etc."
             className="w-full p-2 border border-gray-300 rounded-lg text-sm"
             rows={2}
           />

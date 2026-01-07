@@ -150,6 +150,9 @@ function formatPersonalization(notas?: string): string {
     if (personalization.sinIngredientes && personalization.sinIngredientes.length > 0) {
       parts.push(`Sin: ${personalization.sinIngredientes.join(', ')}`);
     }
+    if (personalization.extras && personalization.extras.length > 0) {
+      parts.push(`Extras: ${personalization.extras.join(', ')}`);
+    }
     if (personalization.bebidas && personalization.bebidas.length > 0) {
       const bebidasText = personalization.bebidas.map((b: any) => {
         if (b.sabor) return `${b.nombre} (${b.sabor})`;
@@ -163,7 +166,7 @@ function formatPersonalization(notas?: string): string {
     
     return parts.join(' | ');
   } catch {
-    // Si no es JSON, retornar como texto simple
+    // Si no es JSON, usar como texto simple
     return notas;
   }
 }
