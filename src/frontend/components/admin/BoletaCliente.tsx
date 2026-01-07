@@ -189,17 +189,10 @@ export default function BoletaCliente({ orden, items, onClose }: BoletaClientePr
       {/* Botones de control - solo visible en pantalla */}
       <div className="no-print p-4 bg-slate-100 flex gap-3">
         <button
-          onClick={handlePrintReceipt}
-          disabled={printing}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {printing ? '⏳ Enviando...' : '📤 Imprimir Boleta'}
-        </button>
-        <button
           onClick={handlePrint}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          🖨️ Vista Previa
+          🖨️ Imprimir
         </button>
         {onClose && (
           <button

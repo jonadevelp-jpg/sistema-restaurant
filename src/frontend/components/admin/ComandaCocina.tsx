@@ -156,14 +156,7 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           onClick={handlePrint}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          🖨️ Vista Previa
-        </button>
-        <button
-          onClick={handleSendToKitchen}
-          disabled={printing}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {printing ? '⏳ Enviando...' : '📤 Enviar a Cocina'}
+          🖨️ Imprimir
         </button>
         {onClose && (
           <button
