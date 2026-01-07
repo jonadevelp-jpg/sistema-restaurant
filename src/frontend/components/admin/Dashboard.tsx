@@ -52,9 +52,9 @@ export default function Dashboard() {
   const [showNuevaOrdenModal, setShowNuevaOrdenModal] = useState(false);
   const [tipoPedidoSeleccionado, setTipoPedidoSeleccionado] = useState<TipoPedido>(null);
   
-  // Visibilidad de KPIs de ventas (seguridad)
-  const [mostrarVentasHoy, setMostrarVentasHoy] = useState(true);
-  const [mostrarVentasMes, setMostrarVentasMes] = useState(true);
+  // Visibilidad de KPIs de ventas (seguridad) - Por defecto ocultos
+  const [mostrarVentasHoy, setMostrarVentasHoy] = useState(false);
+  const [mostrarVentasMes, setMostrarVentasMes] = useState(false);
   
   // Historial de órdenes
   const [ordenesHistorial, setOrdenesHistorial] = useState<OrdenHistorial[]>([]);
