@@ -63,10 +63,12 @@ function formatKitchenHeader(formatter) {
 function formatOrderInfo(formatter, orden) {
   formatter
     .alignLeft()
+    .boldOn()  // Texto grueso para mejor impresión térmica
     .textLine(`Orden: ${truncateText(orden.numero_orden, WIDTH - 7)}`)
     .textLine(`Mesa: ${orden.mesas?.numero || 'N/A'}`)
     .textLine(`Fecha: ${new Date(orden.created_at).toLocaleDateString('es-CL')}`)
     .textLine(`Hora: ${new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
+    .boldOff()
     .separator('-', WIDTH);
 }
 
@@ -136,30 +138,25 @@ function formatKitchenItems(formatter, items) {
           
           if (parts.length > 0) {
             parts.forEach(part => {
-              // Detalles en tamaño medio (doble alto) y negrita
-              // sizeDoubleHeight() mantiene el ancho de 32 caracteres
+              // Detalles en negrita para mejor impresión térmica
               const labelText = `${part.label}:`;
               const maxWidthValue = WIDTH - labelText.length - 3; // Margen para "  " y espacio
               const valueText = truncateText(part.value, maxWidthValue);
               
               formatter
                 .alignLeft()
-                .sizeDoubleHeight()  // Doble alto, ancho normal
-                .boldOn()
+                .boldOn()  // Texto grueso para mejor impresión térmica
                 .textLine(`  ${labelText} ${valueText}`)
-                .boldOff()
-                .sizeNormal();
+                .boldOff();
             });
           }
         } catch {
           // Si no es JSON, usar como texto simple
           formatter
             .alignLeft()
-            .sizeDoubleHeight()
-            .boldOn()
+            .boldOn()  // Texto grueso para mejor impresión térmica
             .textLine(`  ${truncateText(item.notas, WIDTH - 2)}`)
-            .boldOff()
-            .sizeNormal();
+            .boldOff();
         }
       }
       
@@ -182,7 +179,9 @@ function formatReceiptItems(formatter, items) {
   // Encabezado de tabla
   formatter
     .alignLeft()
+    .boldOn()  // Texto grueso para mejor impresión térmica
     .textLine('Cant Descripcion        Total')
+    .boldOff()
     .separator('-', WIDTH);
   
   // Items
@@ -194,7 +193,10 @@ function formatReceiptItems(formatter, items) {
     
     // Formato: " 2  SHAWARMA POLLO    $12.345"
     const line = `${cantidad}  ${nombre.padEnd(18)} ${precio}`;
-    formatter.textLine(truncateText(line, WIDTH));
+    formatter
+      .boldOn()  // Texto grueso para mejor impresión térmica
+      .textLine(truncateText(line, WIDTH))
+      .boldOff();
   });
 }
 
@@ -228,16 +230,18 @@ function formatReceiptTotals(formatter, items, orden) {
   formatter
     .separator('-', WIDTH)
     .alignLeft()
+    .boldOn()  // Texto grueso para mejor impresión térmica
     .textFixedWidth(`Monto Neto:     ${formatPrice(subtotalSinIVA)}`, WIDTH, 'left')
     .textFixedWidth(`IVA (19%):      ${formatPrice(ivaTotal)}`, WIDTH, 'left')
+    .boldOff()
     .separator('-', WIDTH)
-    .boldOn()
+    .boldOn()  // Texto grueso para mejor impresión térmica
     .textFixedWidth(`TOTAL:          ${formatPrice(total)}`, WIDTH, 'left')
     .boldOff()
     .separator('-', WIDTH)
     .alignCenter()
-    .sizeDouble()
-    .boldOn()
+    .sizeDouble()  // Doble tamaño para propina (más destacado)
+    .boldOn()  // Texto grueso
     .textLine('PROPINA 10%')
     .textLine(formatPrice(propina))
     .boldOff()
@@ -252,7 +256,9 @@ function formatPaymentInfo(formatter, orden) {
   if (orden.metodo_pago || orden.paid_at) {
     formatter
       .separator('-', WIDTH)
-      .alignLeft();
+      .alignLeft()
+      .sizeDoubleHeight()  // Texto más grande
+      .boldOn();  // Texto grueso para mejor impresión térmica
     
     if (orden.metodo_pago) {
       formatter.textLine(`Metodo de Pago: ${orden.metodo_pago}`);
@@ -261,6 +267,10 @@ function formatPaymentInfo(formatter, orden) {
     if (orden.paid_at) {
       formatter.textLine(`Pagado: ${new Date(orden.paid_at).toLocaleString('es-CL')}`);
     }
+    
+    formatter
+      .boldOff()
+      .sizeNormal();
   }
 }
 
@@ -288,11 +298,14 @@ function formatKitchenFooter(formatter, items, orden) {
   formatter
     .separator('=', WIDTH)
     .alignLeft()
-    .sizeNormal()
+    .boldOn()  // Texto grueso para mejor impresión térmica
     .textLine(`Total de items: ${totalItems}`)
+    .boldOff()
     .separator('=', WIDTH)
     .alignCenter()
+    .boldOn()  // Texto grueso para mejor impresión térmica
     .textLine(new Date().toLocaleString('es-CL'))
+    .boldOff()
     .feed(2)
     .cut();
 }
@@ -305,10 +318,10 @@ function formatGeneralNote(formatter, nota) {
     formatter
       .separator('-', WIDTH)
       .alignLeft()
-      .boldOn()
+      .boldOn()  // Texto grueso para mejor impresión térmica
       .textLine('NOTA GENERAL:')
-      .boldOff()
-      .textLine(truncateText(nota, WIDTH));
+      .textLine(truncateText(nota, WIDTH))
+      .boldOff();
   }
 }
 

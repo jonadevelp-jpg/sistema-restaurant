@@ -172,8 +172,8 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
         <div className="comanda-header">
           <div className="comanda-title">COMANDA COCINA</div>
           <div className="comanda-info">
-            <div>Orden: {orden.numero_orden}</div>
-            <div>
+            <div style={{ fontSize: '18pt', fontWeight: 'bold', color: '#000' }}>Orden: {orden.numero_orden}</div>
+            <div style={{ fontSize: '18pt', fontWeight: 'bold', color: '#000' }}>
               {orden.tipo_pedido === 'barra' 
                 ? '🪑 Consumir en Barra' 
                 : orden.tipo_pedido === 'llevar' 
@@ -182,7 +182,7 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
                 ? `Mesa: ${orden.mesa_id}` // Compatibilidad con órdenes antiguas
                 : 'N/A'}
             </div>
-            <div>Hora: {new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
+            <div style={{ fontSize: '18pt', fontWeight: 'bold', color: '#000' }}>Hora: {new Date(orden.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
         </div>
 
@@ -209,21 +209,21 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
                     <span className="comanda-item-nombre">{item.menu_item?.name || 'Item'}</span>
                   </div>
                   {personalization && (
-                    <div className="comanda-item-notas">
+                    <div className="comanda-item-notas" style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>
                       {personalization.agregado && (
-                        <div>Agregado: {personalization.agregado}</div>
+                        <div style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>Agregado: {personalization.agregado}</div>
                       )}
                       {personalization.salsas && personalization.salsas.length > 0 && (
-                        <div>Salsa{personalization.salsas.length > 1 ? 's' : ''}: {personalization.salsas.join(', ')}</div>
+                        <div style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>Salsa{personalization.salsas.length > 1 ? 's' : ''}: {personalization.salsas.join(', ')}</div>
                       )}
                       {personalization.sinIngredientes && personalization.sinIngredientes.length > 0 && (
-                        <div>Sin: {personalization.sinIngredientes.join(', ')}</div>
+                        <div style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>Sin: {personalization.sinIngredientes.join(', ')}</div>
                       )}
                       {personalization.extras && personalization.extras.length > 0 && (
-                        <div>Extras: {personalization.extras.join(', ')}</div>
+                        <div style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>Extras: {personalization.extras.join(', ')}</div>
                       )}
                       {personalization.bebidas && personalization.bebidas.length > 0 && (
-                        <div>
+                        <div style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>
                           Bebida{personalization.bebidas.length > 1 ? 's' : ''}:{' '}
                           {personalization.bebidas.map((b: any) => {
                             if (b.sabor) return `${b.nombre} (${b.sabor})`;
@@ -232,7 +232,7 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
                         </div>
                       )}
                       {personalization.detalles && (
-                        <div>Nota: {personalization.detalles}</div>
+                        <div style={{ fontSize: '16pt', fontWeight: 'bold', color: '#000' }}>Nota: {personalization.detalles}</div>
                       )}
                     </div>
                   )}
@@ -323,12 +323,15 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           }
 
           .comanda-info {
-            font-size: 9pt !important;
+            font-size: 18pt !important;
             line-height: 1.5 !important;
+            font-weight: bold !important;
           }
 
           .comanda-info div {
-            margin: 2px 0 !important;
+            margin: 3px 0 !important;
+            font-weight: bold !important;
+            font-size: 18pt !important;
           }
 
           .comanda-separator {
@@ -348,48 +351,56 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           .comanda-item-header {
             display: flex !important;
             align-items: center !important;
-            gap: 6px !important;
+            gap: 8px !important;
             font-weight: bold !important;
-            font-size: 11pt !important;
+            font-size: 20pt !important;
           }
 
           .comanda-item-cantidad {
-            font-size: 12pt !important;
-            min-width: 18px !important;
+            font-size: 22pt !important;
+            min-width: 25px !important;
+            font-weight: bold !important;
           }
 
           .comanda-item-nombre {
             flex: 1 !important;
             text-transform: uppercase !important;
+            font-weight: bold !important;
+            font-size: 20pt !important;
           }
 
           .comanda-item-notas {
-            margin-left: 24px !important;
-            font-size: 8pt !important;
-            font-style: italic !important;
-            color: #555 !important;
-            margin-top: 2px !important;
+            margin-left: 30px !important;
+            font-size: 16pt !important;
+            font-weight: bold !important;
+            color: #000 !important;
+            margin-top: 3px !important;
           }
 
           .comanda-nota {
-            font-size: 9pt !important;
-            padding: 4px !important;
+            font-size: 18pt !important;
+            font-weight: bold !important;
+            padding: 6px !important;
             background: #f0f0f0 !important;
-            border-left: 2px solid black !important;
-            margin: 6px 0 !important;
+            border-left: 3px solid black !important;
+            margin: 8px 0 !important;
           }
 
           .comanda-footer {
             text-align: center !important;
-            font-size: 8pt !important;
+            font-size: 16pt !important;
+            font-weight: bold !important;
+            color: #000 !important;
             margin-top: 10px !important;
             padding-top: 6px !important;
-            border-top: 1px solid #333 !important;
+            border-top: 2px solid #000 !important;
           }
 
           .comanda-timestamp {
-            margin-top: 3px !important;
-            color: #666 !important;
+            margin-top: 4px !important;
+            color: #000 !important;
+            font-weight: bold !important;
+            font-size: 16pt !important;
           }
         }
 
@@ -467,8 +478,8 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           .comanda-item-notas {
             margin-left: 35px;
             font-size: 10pt;
-            font-style: italic;
-            color: #555;
+            font-weight: bold;
+            color: #000;
             margin-top: 3px;
           }
 
@@ -483,6 +494,8 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
           .comanda-footer {
             text-align: center;
             font-size: 10pt;
+            font-weight: bold;
+            color: #000;
             margin-top: 16px;
             padding-top: 10px;
             border-top: 1px solid #333;
@@ -490,7 +503,8 @@ export default function ComandaCocina({ orden, items, onClose }: ComandaCocinaPr
 
           .comanda-timestamp {
             margin-top: 6px;
-            color: #666;
+            color: #000;
+            font-weight: bold;
           }
         }
       `}</style>
